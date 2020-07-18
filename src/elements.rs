@@ -1,3 +1,5 @@
+fn nor(a: bool, b: bool) -> (bool) { !(a || b) }
+
 fn half_adder(a: bool, b: bool) -> (bool, bool) { (a ^ b, a && b) }
 
 fn adder(a: bool, b: bool, carry_in: bool) -> (bool, bool) {
@@ -33,4 +35,30 @@ fn alu_unit(inv_a: bool, a: bool, en_a: bool, b: bool, en_b: bool, carry_in: boo
     let res = a_and_b_res || a_or_b_res || not_b_res || a_plus_b_res;
 
     (res, carry_out)
+}
+
+pub struct SrLatch {
+    pub res: bool
+}
+
+impl SrLatch {
+    pub fn new() -> SrLatch { Latch(false) }
+
+    pub fn update(&mut self, setting: bool, resetting: bool) {
+        let not_res = nor(setting, self.res);
+        self.res = nor(not_res, resetting);
+    }
+}
+
+pub struct DLatch {
+    pub res: bool
+}
+
+impl DLatch {
+    pub fn new() -> DLatch { DLatch(false) }
+
+    pub fn update(&mut self, d: bool) {
+        let not_res = nor(d, self.res);
+        self.res = nor(not_res, !d);
+    }
 }
