@@ -1,3 +1,4 @@
+mod decoders;
 mod alu;
 mod elements;
 
