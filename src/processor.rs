@@ -65,11 +65,19 @@ impl Mic1 {
         // Create A bus
         let a_bus = Bus36::from(self.h.read(true));
 
-        let (c_bus, carry) = alu_36(a_bus, b_bus, self.mir.mir_alu_controls());
+        // Calculate C bus
+        let (c_bus, _carry) = alu_36(a_bus, b_bus, self.mir.mir_alu_controls());
 
         //----- Shifting missed
 
+        // Write C bus into registers
         self.run_c_bus(&c_bus, self.mir.mir_c_bus_controls());
+
+        //------ N, Z bits missed
+
+        // Select next command
+        let next_command = self.mir.mir_addr();
+        self.mpc.update(next_command, true);
 
         return;
     }

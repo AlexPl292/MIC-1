@@ -54,6 +54,12 @@ pub struct Register9 {
 impl Register9 {
     pub fn new() -> Register9 { Register9 { registers: [DLatch::new(); 9] } }
 
+    pub fn update(&mut self, data: [bool; 9], enabled: bool) {
+        for i in 0..9 {
+            self.registers[i].update(data[i], enabled);
+        }
+    }
+
     pub fn get(self) -> [bool; 9] {
         let mut res = [false; 9];
         for i in 0..9 {
