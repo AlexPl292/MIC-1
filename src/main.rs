@@ -1,3 +1,4 @@
+mod bus;
 mod memory;
 mod decoders;
 mod alu;
