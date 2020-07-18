@@ -9,7 +9,8 @@ pub struct DLatch {
 impl DLatch {
     pub fn new() -> DLatch { DLatch { state: false } }
 
-    pub fn update(&mut self, d: bool) {
+    pub fn update(&mut self, d: bool, update: bool) {
+        if !update { return; }
         self.state = d
     }
 }
@@ -22,14 +23,10 @@ pub struct Register36 {
 impl Register36 {
     pub fn new() -> Register36 { Register36 { registers: [DLatch::new(); 36] } }
 
-    pub fn update(&mut self, input: [bool; 36]) {
+    pub fn update_from_bus(&mut self, input: &Bus36, enabled: bool) {
         for i in 0..36 {
-            self.registers[i].update(input[i]);
+            self.registers[i].update(input.data[i], enabled);
         }
-    }
-
-    pub fn update_from_bus(&mut self, input: Bus36) {
-        self.update(input.data)
     }
 
     pub fn get(self) -> [bool; 36] {
@@ -56,12 +53,6 @@ pub struct Register9 {
 
 impl Register9 {
     pub fn new() -> Register9 { Register9 { registers: [DLatch::new(); 9] } }
-
-    pub fn update(&mut self, input: [bool; 9]) {
-        for i in 0..9 {
-            self.registers[i].update(input[i]);
-        }
-    }
 
     pub fn get(self) -> [bool; 9] {
         let mut res = [false; 9];

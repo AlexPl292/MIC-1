@@ -2,7 +2,7 @@ use crate::alu::{alu_36, AluControl};
 use crate::bus::{Bus36, Bus9};
 use crate::decoders::decoder_4x9;
 use crate::memory::{Memory512x36, Register36, Register9};
-use crate::processor_elements::BBusControls;
+use crate::processor_elements::{BBusControls, CBusControls};
 
 impl Register36 {
     fn mir_addr(self) -> [bool; 9] {
@@ -21,6 +21,12 @@ impl Register36 {
         let mut code = [false; 6];
         code.copy_from_slice(&self.get()[14..20]);
         AluControl::from(code)
+    }
+
+    fn mir_c_bus_controls(self) -> CBusControls {
+        let mut code = [false; 9];
+        code.copy_from_slice(&self.get()[21..30]);
+        CBusControls::new(code)
     }
 }
 
@@ -49,7 +55,7 @@ impl Mic1 {
         let new_command = self.control_memory.get(mpc_bus);
 
         // Write new command to mir register
-        self.mir.update_from_bus(new_command);
+        self.mir.update_from_bus(&new_command, true);
 
         // Create B bus
         let b_bus_controls = self.mir.mir_b_bus_controls();
@@ -59,7 +65,11 @@ impl Mic1 {
         // Create A bus
         let a_bus = Bus36::from(self.h.read(true));
 
-        let c_bus = alu_36(a_bus, b_bus, self.mir.mir_alu_controls());
+        let (c_bus, carry) = alu_36(a_bus, b_bus, self.mir.mir_alu_controls());
+
+        //----- Shifting missed
+
+        self.run_c_bus(&c_bus, self.mir.mir_c_bus_controls());
 
         return;
     }
@@ -78,5 +88,17 @@ impl Mic1 {
         bus.connect(self.opc.read(controls.opc()));
 
         bus
+    }
+
+    fn run_c_bus(&mut self, bus: &Bus36, controls: CBusControls) {
+        self.h.update_from_bus(bus, controls.h());
+        self.opc.update_from_bus(bus, controls.opc());
+        self.tos.update_from_bus(bus, controls.tos());
+        self.cpp.update_from_bus(bus, controls.cpp());
+        self.lv.update_from_bus(bus, controls.lv());
+        self.sp.update_from_bus(bus, controls.sp());
+        self.pc.update_from_bus(bus, controls.pc());
+        self.mdr.update_from_bus(bus, controls.mdr());
+        self.mar.update_from_bus(bus, controls.mar());
     }
 }
