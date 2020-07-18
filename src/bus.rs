@@ -1,7 +1,7 @@
 pub struct Bus36 {
-    data: [bool; 36]
+    pub data: [bool; 36]
 }
 
 pub struct Bus9 {
-    data: [bool; 9]
+    pub data: [bool; 9]
 }

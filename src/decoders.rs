@@ -22,7 +22,7 @@ fn decoder_4x9(f0: bool, f1: bool, f2: bool, f3: bool) -> [bool; 9] {
     dest
 }
 
-fn decoder_9x512(input: [bool; 9]) -> [bool; 512] {
+pub fn decoder_9x512(input: [bool; 9]) -> [bool; 512] {
     let mut res = [false; 512];
     let first_part = decoder_4x16(input[0], input[1], input[2], input[3]);
     let second_part = decoder_4x16(input[4], input[5], input[6], input[7]);

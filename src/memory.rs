@@ -1,4 +1,5 @@
 use crate::bus::{Bus9, Bus36};
+use crate::decoders::decoder_9x512;
 
 #[derive(Copy, Clone)]
 pub struct DLatch {
@@ -27,7 +28,7 @@ impl Register36 {
         }
     }
 
-    pub fn get(&mut self) -> [bool; 36] {
+    pub fn get(self) -> [bool; 36] {
         let mut res = [false; 36];
         for i in 0..36 {
             res[i] = self.registers[i].state;
@@ -43,4 +44,14 @@ pub struct Memory512x36 {
 impl Memory512x36 {
     pub fn new() -> Memory512x36 { Memory512x36 { cells: [Register36::new(); 512] } }
 
+    pub fn get(self, address: Bus9) -> Bus36 {
+        let mut res_array = [false; 36];
+        let decoded_address = decoder_9x512(address.data);
+        for i in 0..512 {
+            for k in 0..36 {
+                res_array[k] = res_array[k] || self.cells[i].registers[k].state && decoded_address[i]
+            }
+        }
+        Bus36 { data: res_array }
+    }
 }
