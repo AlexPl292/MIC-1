@@ -1,3 +1,4 @@
+mod memory;
 mod decoders;
 mod alu;
 mod elements;
