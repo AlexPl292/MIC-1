@@ -1,3 +1,4 @@
+use crate::bus::Bus36;
 use crate::decoders::decoder_2x4;
 
 fn adder(a: bool, b: bool, carry_in: bool) -> (bool, bool) {
@@ -10,13 +11,26 @@ fn adder(a: bool, b: bool, carry_in: bool) -> (bool, bool) {
 
 fn half_adder(a: bool, b: bool) -> (bool, bool) { (a ^ b, a && b) }
 
-struct AluControl {
-    inv_a: bool,
-    en_a: bool,
-    en_b: bool,
+pub struct AluControl {
     f0: bool,
     f1: bool,
+    en_a: bool,
+    en_b: bool,
+    inv_a: bool,
     inc: bool,
+}
+
+impl AluControl {
+    pub fn from(code: [bool; 6]) -> AluControl {
+        AluControl {
+            f0: code[0],
+            f1: code[1],
+            en_a: code[2],
+            en_b: code[3],
+            inv_a: code[4],
+            inc: code[5],
+        }
+    }
 }
 
 fn alu_unit(a: bool, b: bool, inv_a: bool, en_a: bool, en_b: bool, carry_in: bool, f0: bool, f1: bool) -> (bool, bool) {
@@ -43,16 +57,15 @@ fn alu_unit(a: bool, b: bool, inv_a: bool, en_a: bool, en_b: bool, carry_in: boo
     (res, carry_out)
 }
 
-fn alu_8(a: [bool; 8], b: [bool; 8], control: AluControl) -> ([bool; 8], bool) {
-    let mut result = [false; 8];
+pub fn alu_36(a: Bus36, b: Bus36, control: AluControl) -> (Bus36, bool) {
+    let mut result = [false; 36];
 
     let mut carry = control.inc;
-    for i in 0..8 {
-        let (res, alu_carry) = alu_unit(a[i], b[i], control.inv_a, control.en_a, control.en_b, carry, control.f0, control.f1);
+    for i in 0..36 {
+        let (res, alu_carry) = alu_unit(a.data[i], b.data[i], control.inv_a, control.en_a, control.en_b, carry, control.f0, control.f1);
         result[i] = res;
         carry = alu_carry;
     }
 
-    (result, carry)
+    (Bus36::from(result), carry)
 }
-

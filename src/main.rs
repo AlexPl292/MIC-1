@@ -1,3 +1,5 @@
+mod processor_elements;
+mod processor;
 mod bus;
 mod memory;
 mod decoders;

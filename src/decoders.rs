@@ -15,9 +15,9 @@ fn decoder_4x16(f0: bool, f1: bool, f2: bool, f3: bool) -> [bool; 16] {
     res
 }
 
-fn decoder_4x9(f0: bool, f1: bool, f2: bool, f3: bool) -> [bool; 9] {
+pub fn decoder_4x9(input: [bool; 4]) -> [bool; 9] {
     let mut dest = [false; 9];
-    let res = decoder_4x16(f0, f1, f2, f3);
+    let res = decoder_4x16(input[0], input[1], input[2], input[3]);
     dest.copy_from_slice(&res[..9]);
     dest
 }
