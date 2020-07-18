@@ -9,28 +9,33 @@ fn adder(a: bool, b: bool, carry_in: bool) -> (bool, bool) {
     (sum, carry_out)
 }
 
-pub struct SrLatch {
-    pub res: bool
-}
-
-impl SrLatch {
-    pub fn new() -> SrLatch { Latch(false) }
-
-    pub fn update(&mut self, setting: bool, resetting: bool) {
-        let not_res = nor(setting, self.res);
-        self.res = nor(not_res, resetting);
-    }
-}
 
 pub struct DLatch {
-    pub res: bool
+    pub state: bool
 }
 
 impl DLatch {
     pub fn new() -> DLatch { DLatch(false) }
 
     pub fn update(&mut self, d: bool) {
-        let not_res = nor(d, self.res);
-        self.res = nor(not_res, !d);
+        self.state = d
+    }
+}
+
+pub struct Register8 {
+    pub registers: [DLatch; 8]
+}
+
+impl Register8 {
+    pub fn new() -> Register8 { Register8([DLatch::new(); 8]) }
+
+    pub fn update(&mut self, input: [bool; 8]) {
+        for i in 0..8 {
+            self.registers[i].update(input[i]);
+        }
+    }
+
+    pub fn get(&mut self) -> [bool; 8] {
+        self.registers.iter().map(|x| x.state).collect()
     }
 }
