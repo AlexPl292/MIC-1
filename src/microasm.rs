@@ -1,11 +1,17 @@
 use std::collections::HashMap;
 use std::iter::Map;
 
-fn commands() -> HashMap<String, i32> {
+fn commands() -> HashMap<String, [bool; 36]> {
     let mut commands = HashMap::new();
 
-    // main1 : PC = PC + 1; fetch; goto(MBR)
-    // commands.insert(String::from("main1"), 0b1);
+    // iadd
+    // MAR = SP = SP — 1; rd
+    commands.insert(String::from("iadd1"), Cb::new().b_sp().alu_b_dec().mar().sp().read().get());
+    // H = TOS
+    commands.insert(String::from("iadd2"), Cb::new().h().b_tos().get());
+    // MDR = TOS = MDR + H; wr; goto Main1
+    todo!("goto missing");
+    commands.insert(String::from("iadd3"), Cb::new().b_mdr().alu_sum().mdr().tos().write().get());
 
 
     return commands;
@@ -30,12 +36,19 @@ impl Cb {
     fn jamz(&mut self) -> &mut Cb { self.bit(11) }
     fn sll8(&mut self) -> &mut Cb { self.bit(12) }
     fn sra1(&mut self) -> &mut Cb { self.bit(13) }
+
+    // ALU
     fn f0(&mut self) -> &mut Cb { self.bit(14) }
     fn f1(&mut self) -> &mut Cb { self.bit(15) }
     fn ena(&mut self) -> &mut Cb { self.bit(16) }
     fn enb(&mut self) -> &mut Cb { self.bit(17) }
     fn inva(&mut self) -> &mut Cb { self.bit(18) }
     fn inc(&mut self) -> &mut Cb { self.bit(19) }
+
+    // ALU helper
+    fn alu_b_dec(&mut self) -> &mut Cb { self.f0().f1().enb().inva() }
+    fn alu_sum(&mut self) -> &mut Cb { self.f0().f1().ena().enb() }
+
     fn h(&mut self) -> &mut Cb { self.bit(20) }
     fn opc(&mut self) -> &mut Cb { self.bit(21) }
     fn tos(&mut self) -> &mut Cb { self.bit(22) }
@@ -59,7 +72,7 @@ impl Cb {
     fn b_tos(&mut self) -> &mut Cb { self.bit(32).bit(33).bit(34) }
     fn b_ops(&mut self) -> &mut Cb { self.bit(35) }
 
-    fn get(self) -> [bool; 36] { self.command }
+    fn get(&self) -> [bool; 36] { self.command }
 
     fn bit(&mut self, i: usize) -> &mut Cb {
         self.command[i] = true;
