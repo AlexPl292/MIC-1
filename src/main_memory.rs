@@ -3,9 +3,9 @@ pub struct MainMemory {
 }
 
 impl MainMemory {
-    pub fn read(self, addr: [bool; 32]) -> [bool; 32] {
+    pub fn read(&self, addr: [bool; 32]) -> [bool; 32] {
         let i_addr = fast_encode(addr);
-        let data = self.cells[i_addr];
+        let data = self.cells[i_addr as usize];
         fast_decode(data)
     }
 }
@@ -28,6 +28,7 @@ fn fast_encode(data: [bool; 32]) -> i32 {
     res
 }
 
+#[derive(PartialEq)]
 pub enum ReadState {
     ReadInitialized,
     ReadInProgress,

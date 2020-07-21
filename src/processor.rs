@@ -7,6 +7,8 @@ use crate::memory::{Memory512x36, Register32, Register36, Register9};
 use crate::processor_elements::{BBusControls, CBusControls};
 
 impl Register36 {
+    fn mir_jmpc(self) -> bool { self.get()[9] }
+
     fn mir_addr(self) -> [bool; 9] {
         let mut res = [false; 9];
         res.copy_from_slice(&self.get()[..9]);
@@ -63,14 +65,14 @@ impl Mic1 {
         if self.read_state == ReadInProgress {
             self.read_state = NoRead;
             self.mar.update_from_bus(&Bus32::from(self.main_memory.read(self.mdr.read(true))), true);
-        } else if self.read_state = ReadInitialized {
+        } else if self.read_state == ReadInitialized {
             self.read_state = ReadInProgress;
         }
 
         if self.fetch_state == ReadInProgress {
             self.fetch_state = NoRead;
             self.mbr.update_from_bus(&Bus32::from(self.main_memory.read(self.pc.read(true))), true);
-        } else if self.fetch_state = ReadInitialized {
+        } else if self.fetch_state == ReadInitialized {
             self.fetch_state = ReadInProgress;
         }
 
@@ -108,11 +110,27 @@ impl Mic1 {
 
         //------ N, Z bits missed
 
+        // O operation
         // Select next command
-        let next_command = self.mir.mir_addr();
+        let next_command = self.o();
         self.mpc.update(next_command, true);
 
         return;
+    }
+
+    fn o(&self) -> [bool; 9] {
+        let mut next_command = self.mir.mir_addr();
+
+        let mut mbr_value = self.mbr.get();
+        for i in 0..8 {
+            mbr_value[i] &= self.mir.mir_jmpc()
+        }
+
+        for i in 0..8 {
+            next_command[i] |= mbr_value[i];
+        }
+
+        next_command
     }
 
     fn run_b_bus(&self, controls: BBusControls) -> Bus32 {
