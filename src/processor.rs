@@ -1,7 +1,7 @@
-use crate::alu::{alu_36, AluControl};
-use crate::bus::{Bus36, Bus9};
+use crate::alu::{alu_32, AluControl};
+use crate::bus::{Bus32, Bus36, Bus9};
 use crate::decoders::decoder_4x9;
-use crate::memory::{Memory512x36, Register36, Register9};
+use crate::memory::{Memory512x36, Register32, Register36, Register9};
 use crate::processor_elements::{BBusControls, CBusControls};
 
 impl Register36 {
@@ -34,16 +34,16 @@ pub struct Mic1 {
     mir: Register36,
     mpc: Register9,
 
-    mar: Register36,
-    mdr: Register36,
-    pc: Register36,
-    mbr: Register36,
-    sp: Register36,
-    lv: Register36,
-    cpp: Register36,
-    tos: Register36,
-    opc: Register36,
-    h: Register36,
+    mar: Register32,
+    mdr: Register32,
+    pc: Register32,
+    mbr: Register32,
+    sp: Register32,
+    lv: Register32,
+    cpp: Register32,
+    tos: Register32,
+    opc: Register32,
+    h: Register32,
 
     control_memory: Memory512x36,
 }
@@ -63,10 +63,10 @@ impl Mic1 {
         let b_bus = self.run_b_bus(decoded_b_bus_controls);
 
         // Create A bus
-        let a_bus = Bus36::from(self.h.read(true));
+        let a_bus = Bus32::from(self.h.read(true));
 
         // Calculate C bus
-        let (c_bus, _carry) = alu_36(a_bus, b_bus, self.mir.mir_alu_controls());
+        let (c_bus, _carry) = alu_32(a_bus, b_bus, self.mir.mir_alu_controls());
 
         //----- Shifting missed
 
@@ -82,8 +82,8 @@ impl Mic1 {
         return;
     }
 
-    fn run_b_bus(&self, controls: BBusControls) -> Bus36 {
-        let mut bus = Bus36::new();
+    fn run_b_bus(&self, controls: BBusControls) -> Bus32 {
+        let mut bus = Bus32::new();
 
         bus.connect(self.mdr.read(controls.mdr()));
         bus.connect(self.pc.read(controls.pc()));
@@ -98,7 +98,7 @@ impl Mic1 {
         bus
     }
 
-    fn run_c_bus(&mut self, bus: &Bus36, controls: CBusControls) {
+    fn run_c_bus(&mut self, bus: &Bus32, controls: CBusControls) {
         self.h.update_from_bus(bus, controls.h());
         self.opc.update_from_bus(bus, controls.opc());
         self.tos.update_from_bus(bus, controls.tos());

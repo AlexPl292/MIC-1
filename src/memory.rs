@@ -1,4 +1,4 @@
-use crate::bus::{Bus36, Bus9};
+use crate::bus::{Bus32, Bus36, Bus9};
 use crate::decoders::decoder_9x512;
 
 #[derive(Copy, Clone)]
@@ -40,6 +40,37 @@ impl Register36 {
     pub fn read(self, enabled: bool) -> [bool; 36] {
         let mut res = self.get();
         for i in 0..36 {
+            res[i] = res[i] && enabled
+        }
+        res
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct Register32 {
+    pub registers: [DLatch; 32]
+}
+
+impl Register32 {
+    pub fn new() -> Register32 { Register32 { registers: [DLatch::new(); 32] } }
+
+    pub fn update_from_bus(&mut self, input: &Bus32, enabled: bool) {
+        for i in 0..32 {
+            self.registers[i].update(input.data[i], enabled);
+        }
+    }
+
+    pub fn get(self) -> [bool; 32] {
+        let mut res = [false; 32];
+        for i in 0..32 {
+            res[i] = self.registers[i].state;
+        }
+        res
+    }
+
+    pub fn read(self, enabled: bool) -> [bool; 32] {
+        let mut res = self.get();
+        for i in 0..32 {
             res[i] = res[i] && enabled
         }
         res
