@@ -1,6 +1,8 @@
 use crate::alu::{alu_32, AluControl};
 use crate::bus::{Bus32, Bus36, Bus9};
 use crate::decoders::decoder_4x9;
+use crate::main_memory::{MainMemory, ReadState};
+use crate::main_memory::ReadState::{NoRead, ReadInitialized, ReadInProgress};
 use crate::memory::{Memory512x36, Register32, Register36, Register9};
 use crate::processor_elements::{BBusControls, CBusControls};
 
@@ -16,6 +18,10 @@ impl Register36 {
         res.copy_from_slice(&self.get()[32..36]);
         res
     }
+
+    fn mir_write(self) -> bool { self.get()[29] }
+    fn mir_read(self) -> bool { self.get()[30] }
+    fn mir_fetch(self) -> bool { self.get()[31] }
 
     fn mir_alu_controls(self) -> AluControl {
         let mut code = [false; 6];
@@ -46,16 +52,43 @@ pub struct Mic1 {
     h: Register32,
 
     control_memory: Memory512x36,
+
+    main_memory: MainMemory,
+    read_state: ReadState,
+    fetch_state: ReadState,
 }
 
 impl Mic1 {
     pub fn execute_command(&mut self) {
+        if self.read_state == ReadInProgress {
+            self.read_state = NoRead;
+            self.mar.update_from_bus(&Bus32::from(self.main_memory.read(self.mdr.read(true))), true);
+        } else if self.read_state = ReadInitialized {
+            self.read_state = ReadInProgress;
+        }
+
+        if self.fetch_state == ReadInProgress {
+            self.fetch_state = NoRead;
+            self.mbr.update_from_bus(&Bus32::from(self.main_memory.read(self.pc.read(true))), true);
+        } else if self.fetch_state = ReadInitialized {
+            self.fetch_state = ReadInProgress;
+        }
+
         // Read new command
         let mpc_bus = Bus9::from(self.mpc.get());
         let new_command = self.control_memory.get(mpc_bus);
 
         // Write new command to mir register
         self.mir.update_from_bus(&new_command, true);
+
+        // Initialize reads
+        // XXX
+        if self.mir.mir_read() {
+            self.read_state = ReadInitialized;
+        }
+        if self.mir.mir_fetch() {
+            self.fetch_state = ReadInitialized;
+        }
 
         // Create B bus
         let b_bus_controls = self.mir.mir_b_bus_controls();

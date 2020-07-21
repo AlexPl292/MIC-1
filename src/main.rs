@@ -1,3 +1,4 @@
+mod main_memory;
 mod microasm;
 mod processor_elements;
 mod processor;
