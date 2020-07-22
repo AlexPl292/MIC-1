@@ -39,7 +39,8 @@ fn alu_unit(a: bool, b: bool, inv_a: bool, en_a: bool, en_b: bool, carry_in: boo
     let a_signal = a_enabled ^ inv_a;
 
     // Decode allow signals
-    let allowed = decoder_2x4(f0, f1);
+    // f1 and f0 should be in this order because mic-1 uses different bit ordering
+    let allowed = decoder_2x4(f1, f0);
 
     // Compute simple resultes
     let a_and_b_res = (a_signal && b_signal) && allowed[0];

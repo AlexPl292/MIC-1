@@ -19,7 +19,7 @@ impl MainMemory {
 pub fn fast_decode(number: i32) -> [bool; 32] {
     let mut res = [false; 32];
     for i in 0..32 {
-        res[i] = (number & (1 << (31 - i))) != 0;
+        res[i] = (number & (1 << (i))) != 0;
     }
     res
 }
@@ -28,7 +28,7 @@ fn fast_encode(data: [bool; 32]) -> i32 {
     let mut res = 0;
 
     for i in 0..32 {
-        res = res | (if data[i] { 1 } else { 0 }) << (31 - i);
+        res = res | (if data[i] { 1 } else { 0 }) << i;
     }
 
     res

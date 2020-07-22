@@ -1,5 +1,5 @@
 pub fn decoder_2x4(f0: bool, f1: bool) -> [bool; 4] {
-    [!f0 && !f1, !f0 && f1, f0 && !f1, f0 && f1]
+    [!f0 && !f1, f0 && !f1, !f0 && f1, f0 && f1]
 }
 
 fn decoder_4x16(f0: bool, f1: bool, f2: bool, f3: bool) -> [bool; 16] {
@@ -29,8 +29,8 @@ pub fn decoder_9x512(input: [bool; 9]) -> [bool; 512] {
 
     for i in 0..16 {
         for k in 0..16 {
-            res[i * 16 + k] = first_part[i] && second_part[k];
-            res[i * 16 + k + 256] = first_part[i] && second_part[k];
+            res[i * 16 + k] = first_part[k] && second_part[i];
+            res[i * 16 + k + 256] = first_part[k] && second_part[i];
         }
     }
 

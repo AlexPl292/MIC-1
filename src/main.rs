@@ -3,6 +3,7 @@ use crate::memory::{Memory512x36, Register32};
 use crate::microasm::commands;
 use crate::bus::Bus32;
 use crate::processor::Mic1;
+use crate::decoders::{decoder_4x9, decoder_9x512};
 
 mod main_memory;
 mod microasm;
@@ -42,6 +43,7 @@ fn main() {
 
     let mut mic1 = Mic1::init(memory, control_memory, tos, pc, sp);
 
+    mic1.execute_command();
     mic1.execute_command();
     mic1.execute_command();
 }

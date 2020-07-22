@@ -33,7 +33,7 @@ impl Register36 {
 
     fn mir_c_bus_controls(self) -> CBusControls {
         let mut code = [false; 9];
-        code.copy_from_slice(&self.get()[21..30]);
+        code.copy_from_slice(&self.get()[20..29]);
         CBusControls::new(code)
     }
 }
@@ -85,7 +85,7 @@ impl Mic1 {
     pub fn execute_command(&mut self) {
         if self.read_state == ReadInProgress {
             self.read_state = NoRead;
-            self.mar.update_from_bus(&Bus32::from(self.main_memory.read(self.mdr.read(true))), true);
+            self.mdr.update_from_bus(&Bus32::from(self.main_memory.read(self.mar.read(true))), true);
         } else if self.read_state == ReadInitialized {
             self.read_state = ReadInProgress;
         }
@@ -127,7 +127,8 @@ impl Mic1 {
         //----- Shifting missed
 
         // Write C bus into registers
-        self.run_c_bus(&c_bus, self.mir.mir_c_bus_controls());
+        let c_bus_controls = self.mir.mir_c_bus_controls();
+        self.run_c_bus(&c_bus, c_bus_controls);
 
         //------ N, Z bits missed
 
