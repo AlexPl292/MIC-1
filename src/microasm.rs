@@ -6,12 +6,12 @@ pub fn commands() -> HashMap<String, [bool; 36]> {
 
     // iadd
     // MAR = SP = SP — 1; rd
-    commands.insert(String::from("iadd1"), Cb::new().b_sp().alu_b_dec().mar().sp().read().next_addr([true, false, false, false, false, false, false, false, false]).get());
+    commands.insert(String::from("iadd1"), Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_addr([true, false, false, false, false, false, false, false, false]).get());
     // H = TOS
-    commands.insert(String::from("iadd2"), Cb::new().h().b_tos().alu_b().next_addr([false, true, false, false, false, false, false, false, false]).get());
+    commands.insert(String::from("iadd2"), Cb::new().r_tos().alu_b().w_h().next_addr([false, true, false, false, false, false, false, false, false]).get());
     // MDR = TOS = MDR + H; wr; goto Main1
     // todo!("goto missing");
-    commands.insert(String::from("iadd3"), Cb::new().b_mdr().alu_sum().mdr().tos().write().next_addr([false, false, false, false, false, false, false, false, false]).get());
+    commands.insert(String::from("iadd3"), Cb::new().r_mdr().alu_sum().w_mdr().w_tos().write().next_addr([false, false, false, false, false, false, false, false, false]).get());
 
 
     return commands;
@@ -50,28 +50,28 @@ impl Cb {
     fn alu_sum(&mut self) -> &mut Cb { self.f0().f1().ena().enb() }
     fn alu_b(&mut self) -> &mut Cb { self.f1().enb() }
 
-    fn h(&mut self) -> &mut Cb { self.bit(20) }
-    fn opc(&mut self) -> &mut Cb { self.bit(21) }
-    fn tos(&mut self) -> &mut Cb { self.bit(22) }
-    fn cpp(&mut self) -> &mut Cb { self.bit(23) }
-    fn lv(&mut self) -> &mut Cb { self.bit(24) }
-    fn sp(&mut self) -> &mut Cb { self.bit(25) }
-    fn pc(&mut self) -> &mut Cb { self.bit(26) }
-    fn mdr(&mut self) -> &mut Cb { self.bit(27) }
-    fn mar(&mut self) -> &mut Cb { self.bit(28) }
+    fn w_h(&mut self) -> &mut Cb { self.bit(20) }
+    fn w_opc(&mut self) -> &mut Cb { self.bit(21) }
+    fn w_tos(&mut self) -> &mut Cb { self.bit(22) }
+    fn w_cpp(&mut self) -> &mut Cb { self.bit(23) }
+    fn w_lv(&mut self) -> &mut Cb { self.bit(24) }
+    fn w_sp(&mut self) -> &mut Cb { self.bit(25) }
+    fn w_pc(&mut self) -> &mut Cb { self.bit(26) }
+    fn w_mdr(&mut self) -> &mut Cb { self.bit(27) }
+    fn w_mar(&mut self) -> &mut Cb { self.bit(28) }
     fn write(&mut self) -> &mut Cb { self.bit(29) }
     fn read(&mut self) -> &mut Cb { self.bit(30) }
     fn fetch(&mut self) -> &mut Cb { self.bit(31) }
 
-    fn b_mdr(&mut self) -> &mut Cb { return self; }
-    fn b_pc(&mut self) -> &mut Cb { self.bit(32) }
-    fn b_mbr(&mut self) -> &mut Cb { self.bit(33) }
-    fn b_mbru(&mut self) -> &mut Cb { self.bit(32).bit(33) }
-    fn b_sp(&mut self) -> &mut Cb { self.bit(34) }
-    fn b_lv(&mut self) -> &mut Cb { self.bit(32).bit(34) }
-    fn b_cpp(&mut self) -> &mut Cb { self.bit(33).bit(34) }
-    fn b_tos(&mut self) -> &mut Cb { self.bit(32).bit(33).bit(34) }
-    fn b_ops(&mut self) -> &mut Cb { self.bit(35) }
+    fn r_mdr(&mut self) -> &mut Cb { return self; }
+    fn r_pc(&mut self) -> &mut Cb { self.bit(32) }
+    fn r_mbr(&mut self) -> &mut Cb { self.bit(33) }
+    fn r_mbru(&mut self) -> &mut Cb { self.bit(32).bit(33) }
+    fn r_sp(&mut self) -> &mut Cb { self.bit(34) }
+    fn r_lv(&mut self) -> &mut Cb { self.bit(32).bit(34) }
+    fn r_cpp(&mut self) -> &mut Cb { self.bit(33).bit(34) }
+    fn r_tos(&mut self) -> &mut Cb { self.bit(32).bit(33).bit(34) }
+    fn r_ops(&mut self) -> &mut Cb { self.bit(35) }
 
     fn get(&self) -> [bool; 36] { self.command }
 
