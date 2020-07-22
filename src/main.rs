@@ -5,6 +5,7 @@ use crate::bus::Bus32;
 use crate::processor::Mic1;
 use crate::decoders::{decoder_4x9, decoder_9x512};
 
+mod asm;
 mod main_memory;
 mod microasm;
 mod processor_elements;
