@@ -1,17 +1,17 @@
 use std::collections::HashMap;
 use std::iter::Map;
 
-fn commands() -> HashMap<String, [bool; 36]> {
+pub fn commands() -> HashMap<String, [bool; 36]> {
     let mut commands = HashMap::new();
 
     // iadd
     // MAR = SP = SP — 1; rd
-    commands.insert(String::from("iadd1"), Cb::new().b_sp().alu_b_dec().mar().sp().read().get());
+    commands.insert(String::from("iadd1"), Cb::new().b_sp().alu_b_dec().mar().sp().read().next_addr([false, false, false, false, false, true, false, true, true]).get());
     // H = TOS
-    commands.insert(String::from("iadd2"), Cb::new().h().b_tos().get());
+    commands.insert(String::from("iadd2"), Cb::new().h().b_tos().next_addr([false, false, false, false, false, true, true, false, false]).get());
     // MDR = TOS = MDR + H; wr; goto Main1
-    todo!("goto missing");
-    commands.insert(String::from("iadd3"), Cb::new().b_mdr().alu_sum().mdr().tos().write().get());
+    // todo!("goto missing");
+    commands.insert(String::from("iadd3"), Cb::new().b_mdr().alu_sum().mdr().tos().write().next_addr([false, false, false, false, false, true, false, true, false]).get());
 
 
     return commands;

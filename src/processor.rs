@@ -61,6 +61,27 @@ pub struct Mic1 {
 }
 
 impl Mic1 {
+    pub fn init(main_memory: MainMemory, control_memory: Memory512x36, tos: Register32, pc: Register32, sp: Register32) -> Mic1 {
+        Mic1 {
+            mir: Register36::new(),
+            mpc: Register9::new(),
+            mar: Register32::new(),
+            mdr: Register32::new(),
+            pc,
+            mbr: Register32::new(),
+            sp,
+            lv: Register32::new(),
+            cpp: Register32::new(),
+            tos,
+            opc: Register32::new(),
+            h: Register32::new(),
+            control_memory,
+            main_memory,
+            read_state: ReadState::NoRead,
+            fetch_state: ReadState::NoRead,
+        }
+    }
+
     pub fn execute_command(&mut self) {
         if self.read_state == ReadInProgress {
             self.read_state = NoRead;

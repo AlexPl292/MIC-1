@@ -115,6 +115,13 @@ pub struct Memory512x36 {
 impl Memory512x36 {
     pub fn new() -> Memory512x36 { Memory512x36 { cells: [Register36::new(); 512] } }
 
+    pub fn write_data(&mut self, data: [bool; 36], addr: usize) {
+        let bus36 = Bus36::from(data);
+        let mut register = Register36::new();
+        register.update_from_bus(&bus36, true);
+        self.cells[addr] = register
+    }
+
     pub fn get(&self, address: Bus9) -> Bus36 {
         let mut res_array = [false; 36];
         let decoded_address = decoder_9x512(address.data);

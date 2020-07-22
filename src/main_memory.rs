@@ -3,6 +3,12 @@ pub struct MainMemory {
 }
 
 impl MainMemory {
+    pub fn initialize() -> MainMemory { MainMemory { cells: [0; 512] } }
+
+    pub fn write_data(&mut self, data: i32, addr: usize) {
+        self.cells[addr] = data
+    }
+
     pub fn read(&self, addr: [bool; 32]) -> [bool; 32] {
         let i_addr = fast_encode(addr);
         let data = self.cells[i_addr as usize];
@@ -10,7 +16,7 @@ impl MainMemory {
     }
 }
 
-fn fast_decode(number: i32) -> [bool; 32] {
+pub fn fast_decode(number: i32) -> [bool; 32] {
     let mut res = [false; 32];
     for i in 0..32 {
         res[i] = (number & (1 << (31 - i))) != 0;
