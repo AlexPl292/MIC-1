@@ -1,9 +1,9 @@
-use crate::main_memory::{MainMemory, fast_decode};
-use crate::memory::{Memory512x36, Register32};
-use crate::microasm::commands;
 use crate::bus::Bus32;
-use crate::processor::Mic1;
 use crate::decoders::{decoder_4x9, decoder_9x512};
+use crate::main_memory::{fast_decode, MainMemory};
+use crate::memory::{Memory512x36, Register32};
+use crate::microasm::MicroAsm::{iadd1, iadd2, iadd3};
+use crate::processor::Mic1;
 
 mod asm;
 mod main_memory;
@@ -26,12 +26,12 @@ fn main() {
     // Program
     memory.write_data(0, 100);
 
-    let commands = commands();
+    // let commands = commands();
     let mut control_memory = Memory512x36::new();
 
-    control_memory.write_data(commands.get("iadd1").unwrap().clone(), 0);
-    control_memory.write_data(commands.get("iadd2").unwrap().clone(), 1);
-    control_memory.write_data(commands.get("iadd3").unwrap().clone(), 2);
+    // control_memory.write_data(commands.get(&iadd1).unwrap().clone(), 0);
+    // control_memory.write_data(commands.get(&iadd2).unwrap().clone(), 1);
+    // control_memory.write_data(commands.get(&iadd3).unwrap().clone(), 2);
 
     let mut tos = Register32::new();
     tos.update_from_bus(&Bus32::from(fast_decode(2)), true);

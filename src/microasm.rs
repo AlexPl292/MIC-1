@@ -1,20 +1,82 @@
 use std::collections::HashMap;
 use std::iter::Map;
 
-pub fn commands() -> HashMap<String, [bool; 36]> {
-    let mut commands = HashMap::new();
+use crate::asm::IjvmCommand;
+use crate::asm::IjvmCommand::*;
+use crate::main_memory::fast_decode;
+use crate::microasm::MicroAsm::*;
 
-    // iadd
-    // MAR = SP = SP — 1; rd
-    commands.insert(String::from("iadd1"), Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_addr([true, false, false, false, false, false, false, false, false]).get());
-    // H = TOS
-    commands.insert(String::from("iadd2"), Cb::new().r_tos().alu_b().w_h().next_addr([false, true, false, false, false, false, false, false, false]).get());
-    // MDR = TOS = MDR + H; wr; goto Main1
-    // todo!("goto missing");
-    commands.insert(String::from("iadd3"), Cb::new().r_mdr().alu_sum().w_mdr().w_tos().write().next_addr([false, false, false, false, false, false, false, false, false]).get());
+//noinspection SpellCheckingInspection
+/**
+ * Commands and it's locations in memory.
 
+ * iand3 = IAND + 2 + 3   <- First number - initial command location,
+ *                           second - shifting from initial command,
+ *                           third - shifting if we can't put this command at this place
+ */
+#[allow(non_camel_case_types)]
+#[derive(PartialEq, Eq, Hash)]
+pub enum MicroAsm {
+    Main1 = 1,
 
-    return commands;
+    nop1 = NOP as isize,
+
+    iadd1 = IADD as isize,
+    iadd2 = IADD as isize + 1,
+    iadd3 = IADD as isize + 2,
+
+    isub1 = ISUB as isize,
+    isub2 = ISUB as isize + 1,
+    isub3 = ISUB as isize + 2,
+
+    iand1 = IAND as isize,
+    iand2 = IAND as isize + 1,
+    iand3 = IAND as isize + 2 + 3,
+
+    ior1 = IOR as isize,
+    ior2 = IOR as isize + 1,
+    ior3 = IOR as isize + 2,
+
+    dup1 = DUP as isize,
+    dup2 = DUP as isize + 1,
+
+    pop1 = POP as isize,
+    pop2 = POP as isize + 1,
+    pop3 = POP as isize + 2 + 3,
+}
+
+impl MicroAsm {
+    //noinspection SpellCheckingInspection
+    fn command(&self) -> [bool; 36] {
+        match *self {
+            Main1 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().jmpc().get(),
+
+            nop1 => Cb::new().next_command(Main1).get(),
+
+            iadd1 => Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_command(iadd2).get(),
+            iadd2 => Cb::new().r_tos().alu_b().w_h().next_command(iadd3).get(),
+            iadd3 => Cb::new().r_mdr().alu_sum().w_mdr().w_tos().write().finish().get(),
+
+            isub1 => Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_command(isub2).get(),
+            isub2 => Cb::new().r_tos().alu_b().w_h().next_command(isub3).get(),
+            isub3 => Cb::new().r_mdr().alu_sub().w_mdr().w_tos().write().finish().get(),
+
+            iand1 => Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_command(iand2).get(),
+            iand2 => Cb::new().r_tos().alu_b().w_h().next_command(iand3).get(),
+            iand3 => Cb::new().r_mdr().alu_and().w_mdr().w_tos().write().finish().get(),
+
+            ior1 => Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_command(ior2).get(),
+            ior2 => Cb::new().r_tos().alu_b().w_h().next_command(ior3).get(),
+            ior3 => Cb::new().r_mdr().alu_or().w_mdr().w_tos().write().finish().get(),
+
+            dup1 => Cb::new().r_sp().alu_b_inc().w_sp().w_mar().next_command(dup2).get(),
+            dup2 => Cb::new().r_tos().alu_b().w_mdr().write().finish().get(),
+
+            pop1 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(pop2).get(),
+            pop2 => Cb::new().next_command(pop3).get(), // Waiting for read
+            pop3 => Cb::new().r_mdr().alu_b().w_tos().finish().get(),
+        }
+    }
 }
 
 struct Cb {
@@ -24,9 +86,12 @@ struct Cb {
 impl Cb {
     fn new() -> Cb { Cb { command: [false; 36] } }
 
-    fn next_addr(&mut self, addr: [bool; 9]) -> &mut Cb {
-        for i in 0..9 {
-            self.command[i] = addr[i]
+    fn finish(&mut self) -> &mut Cb { self.next_command(Main1) }
+
+    fn next_command(&mut self, addr: MicroAsm) -> &mut Cb {
+        let decoded = fast_decode(addr as i32);
+        for x in 0..9 {
+            self.command[x] = decoded[x];
         }
         return self;
     }
@@ -47,7 +112,11 @@ impl Cb {
 
     // ALU helper
     fn alu_b_dec(&mut self) -> &mut Cb { self.f0().f1().enb().inva() }
+    fn alu_b_inc(&mut self) -> &mut Cb { self.f0().f1().enb().inc() }
     fn alu_sum(&mut self) -> &mut Cb { self.f0().f1().ena().enb() }
+    fn alu_sub(&mut self) -> &mut Cb { self.f0().f1().ena().enb().inva().inc() }
+    fn alu_and(&mut self) -> &mut Cb { self.ena().enb() }
+    fn alu_or(&mut self) -> &mut Cb { self.f1().ena().enb() }
     fn alu_b(&mut self) -> &mut Cb { self.f1().enb() }
 
     fn w_h(&mut self) -> &mut Cb { self.bit(20) }

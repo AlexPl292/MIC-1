@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types)]
 //noinspection SpellCheckingInspection
-enum IjvmCommand {
+pub enum IjvmCommand {
     BIPUSH = 0x10,
     DUP = 0x59,
     GOTO = 0xA7,
