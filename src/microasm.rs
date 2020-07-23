@@ -43,6 +43,30 @@ pub enum MicroAsm {
     pop1 = POP as isize,
     pop2 = POP as isize + 1,
     pop3 = POP as isize + 2 + 3,
+
+    swap1 = SWAP as isize,
+    swap2 = SWAP as isize + 1 + 10,
+    swap3 = SWAP as isize + 2 + 10,
+    swap4 = SWAP as isize + 3 + 10,
+    swap5 = SWAP as isize + 4 + 10,
+    swap6 = SWAP as isize + 5 + 10,
+
+    bipush1 = BIPUSH as isize,
+    bipush2 = BIPUSH as isize + 1,
+    bipush3 = BIPUSH as isize + 2,
+
+    iload1 = ILOAD as isize,
+    iload2 = ILOAD as isize + 1,
+    iload3 = ILOAD as isize + 2,
+    iload4 = ILOAD as isize + 3,
+    iload5 = ILOAD as isize + 4,
+
+    istore1 = ISTORE as isize,
+    istore2 = ISTORE as isize + 1,
+    istore3 = ISTORE as isize + 2,
+    istore4 = ISTORE as isize + 3,
+    istore5 = ISTORE as isize + 4,
+    istore6 = ISTORE as isize + 5,
 }
 
 impl MicroAsm {
@@ -75,6 +99,30 @@ impl MicroAsm {
             pop1 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(pop2).get(),
             pop2 => Cb::new().next_command(pop3).get(), // Waiting for read
             pop3 => Cb::new().r_mdr().alu_b().w_tos().finish().get(),
+
+            swap1 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(swap2).get(),
+            swap2 => Cb::new().r_sp().alu_b().w_mar().next_command(swap3).get(),
+            swap3 => Cb::new().r_mdr().alu_b().w_h().write().next_command(swap4).get(),
+            swap4 => Cb::new().r_tos().alu_b().w_mdr().next_command(swap5).get(),
+            swap5 => Cb::new().r_sp().alu_b_dec().w_mar().write().next_command(swap6).get(),
+            swap6 => Cb::new().alu_a().w_tos().next_command(Main1).get(),
+
+            bipush1 => Cb::new().r_sp().alu_b_inc().w_sp().w_mar().next_command(bipush2).get(),
+            bipush2 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(bipush3).get(),
+            bipush3 => Cb::new().r_mbr().alu_b().w_tos().w_mdr().write().next_command(Main1).get(),
+
+            iload1 => Cb::new().r_lv().alu_b().w_h().next_command(iload2).get(),
+            iload2 => Cb::new().r_mbru().alu_sum().w_mar().read().next_command(iload3).get(),
+            iload3 => Cb::new().r_sp().alu_b_inc().w_sp().w_mar().next_command(iload4).get(),
+            iload4 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().write().next_command(iload5).get(),
+            iload5 => Cb::new().r_mdr().alu_b().w_tos().next_command(Main1).get(),
+
+            istore1 => Cb::new().r_lv().alu_b().w_h().next_command(istore2).get(),
+            istore2 => Cb::new().r_mbru().alu_sum().w_mar().next_command(istore3).get(),
+            istore3 => Cb::new().r_tos().alu_b().w_mdr().write().next_command(istore4).get(),
+            istore4 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(istore5).get(),
+            istore5 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(istore6).get(),
+            istore6 => Cb::new().r_mdr().alu_b().w_tos().next_command(Main1).get(),
         }
     }
 }
@@ -118,6 +166,7 @@ impl Cb {
     fn alu_and(&mut self) -> &mut Cb { self.ena().enb() }
     fn alu_or(&mut self) -> &mut Cb { self.f1().ena().enb() }
     fn alu_b(&mut self) -> &mut Cb { self.f1().enb() }
+    fn alu_a(&mut self) -> &mut Cb { self.f1().ena() }
 
     fn w_h(&mut self) -> &mut Cb { self.bit(20) }
     fn w_opc(&mut self) -> &mut Cb { self.bit(21) }
