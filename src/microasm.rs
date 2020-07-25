@@ -97,6 +97,28 @@ pub enum MicroAsm {
     goto4 = GOTO as isize + 3,
     goto5 = GOTO as isize + 4,
     goto6 = GOTO as isize + 5,
+
+    iflt1 = IFLT as isize,
+    iflt2 = IFLT as isize + 1,
+    iflt3 = IFLT as isize + 2,
+    iflt4 = IFLT as isize + 3,
+
+    ifeq1 = IFEQ as isize,
+    ifeq2 = IFEQ as isize + 1,
+    ifeq3 = IFEQ as isize + 2 + 5,
+    ifeq4 = IFEQ as isize + 3 + 6,
+
+    if_icmpeq1 = IF_ICMPEQ as isize,
+    if_icmpeq2 = IF_ICMPEQ as isize + 1 + 13,
+    if_icmpeq3 = IF_ICMPEQ as isize + 2 + 14,
+    if_icmpeq4 = IF_ICMPEQ as isize + 3 + 15,
+    if_icmpeq5 = IF_ICMPEQ as isize + 4 + 16,
+    if_icmpeq6 = IF_ICMPEQ as isize + 5 + 17,
+
+    F = 0x2,
+    F2 = 0x3,
+    F3 = 0x4,
+    T = 0x102,
 }
 
 impl MicroAsm {
@@ -183,6 +205,28 @@ impl MicroAsm {
             goto4 => Cb::new().r_mbru().alu_or().w_h().next_command(goto5),
             goto5 => Cb::new().r_opc().alu_sum().w_pc().fetch().next_command(goto6),
             goto6 => Cb::new().finish(),
+
+            iflt1 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(iflt2),
+            iflt2 => Cb::new().r_tos().alu_b().w_opc().next_command(iflt3),
+            iflt3 => Cb::new().r_mdr().alu_b().w_tos().next_command(iflt4),
+            iflt4 => Cb::new().r_opc().alu_b().jamn().next_command(F),
+
+            ifeq1 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(ifeq2),
+            ifeq2 => Cb::new().r_tos().alu_b().w_opc().next_command(ifeq3),
+            ifeq3 => Cb::new().r_mdr().alu_b().w_tos().next_command(ifeq4),
+            ifeq4 => Cb::new().r_opc().alu_b().jamz().next_command(F),
+
+            if_icmpeq1 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(if_icmpeq2),
+            if_icmpeq2 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().next_command(if_icmpeq3),
+            if_icmpeq3 => Cb::new().r_mdr().alu_b().w_h().read().next_command(if_icmpeq4),
+            if_icmpeq4 => Cb::new().r_tos().alu_b().w_opc().next_command(if_icmpeq5),
+            if_icmpeq5 => Cb::new().r_mdr().alu_b().w_tos().next_command(if_icmpeq6),
+            if_icmpeq6 => Cb::new().r_opc().alu_sub().jamz().next_command(F),
+
+            T => Cb::new().r_pc().alu_b_dec().w_opc().fetch().next_command(goto2),
+            F => Cb::new().r_pc().alu_b_inc().w_pc().next_command(F2),
+            F2 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(F3),
+            F3 => Cb::new().finish(),
         }
     }
 }
