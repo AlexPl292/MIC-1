@@ -86,65 +86,65 @@ impl MicroAsm {
         match *self {
             Main1 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().jmpc().get(),
 
-            nop1 => Cb::new().next_command(Main1).get(),
+            nop1 => Cb::new().next_command(Main1),
 
-            iadd1 => Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_command(iadd2).get(),
-            iadd2 => Cb::new().r_tos().alu_b().w_h().next_command(iadd3).get(),
-            iadd3 => Cb::new().r_mdr().alu_sum().w_mdr().w_tos().write().finish().get(),
+            iadd1 => Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_command(iadd2),
+            iadd2 => Cb::new().r_tos().alu_b().w_h().next_command(iadd3),
+            iadd3 => Cb::new().r_mdr().alu_sum().w_mdr().w_tos().write().finish(),
 
-            isub1 => Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_command(isub2).get(),
-            isub2 => Cb::new().r_tos().alu_b().w_h().next_command(isub3).get(),
-            isub3 => Cb::new().r_mdr().alu_sub().w_mdr().w_tos().write().finish().get(),
+            isub1 => Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_command(isub2),
+            isub2 => Cb::new().r_tos().alu_b().w_h().next_command(isub3),
+            isub3 => Cb::new().r_mdr().alu_sub().w_mdr().w_tos().write().finish(),
 
-            iand1 => Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_command(iand2).get(),
-            iand2 => Cb::new().r_tos().alu_b().w_h().next_command(iand3).get(),
-            iand3 => Cb::new().r_mdr().alu_and().w_mdr().w_tos().write().finish().get(),
+            iand1 => Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_command(iand2),
+            iand2 => Cb::new().r_tos().alu_b().w_h().next_command(iand3),
+            iand3 => Cb::new().r_mdr().alu_and().w_mdr().w_tos().write().finish(),
 
-            ior1 => Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_command(ior2).get(),
-            ior2 => Cb::new().r_tos().alu_b().w_h().next_command(ior3).get(),
-            ior3 => Cb::new().r_mdr().alu_or().w_mdr().w_tos().write().finish().get(),
+            ior1 => Cb::new().r_sp().alu_b_dec().w_mar().w_sp().read().next_command(ior2),
+            ior2 => Cb::new().r_tos().alu_b().w_h().next_command(ior3),
+            ior3 => Cb::new().r_mdr().alu_or().w_mdr().w_tos().write().finish(),
 
-            dup1 => Cb::new().r_sp().alu_b_inc().w_sp().w_mar().next_command(dup2).get(),
-            dup2 => Cb::new().r_tos().alu_b().w_mdr().write().finish().get(),
+            dup1 => Cb::new().r_sp().alu_b_inc().w_sp().w_mar().next_command(dup2),
+            dup2 => Cb::new().r_tos().alu_b().w_mdr().write().finish(),
 
-            pop1 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(pop2).get(),
-            pop2 => Cb::new().next_command(pop3).get(), // Waiting for read
-            pop3 => Cb::new().r_mdr().alu_b().w_tos().finish().get(),
+            pop1 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(pop2),
+            pop2 => Cb::new().next_command(pop3), // Waiting for read
+            pop3 => Cb::new().r_mdr().alu_b().w_tos().finish(),
 
-            swap1 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(swap2).get(),
-            swap2 => Cb::new().r_sp().alu_b().w_mar().next_command(swap3).get(),
-            swap3 => Cb::new().r_mdr().alu_b().w_h().write().next_command(swap4).get(),
-            swap4 => Cb::new().r_tos().alu_b().w_mdr().next_command(swap5).get(),
-            swap5 => Cb::new().r_sp().alu_b_dec().w_mar().write().next_command(swap6).get(),
-            swap6 => Cb::new().alu_a().w_tos().finish().get(),
+            swap1 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(swap2),
+            swap2 => Cb::new().r_sp().alu_b().w_mar().next_command(swap3),
+            swap3 => Cb::new().r_mdr().alu_b().w_h().write().next_command(swap4),
+            swap4 => Cb::new().r_tos().alu_b().w_mdr().next_command(swap5),
+            swap5 => Cb::new().r_sp().alu_b_dec().w_mar().write().next_command(swap6),
+            swap6 => Cb::new().alu_a().w_tos().finish(),
 
-            bipush1 => Cb::new().r_sp().alu_b_inc().w_sp().w_mar().next_command(bipush2).get(),
-            bipush2 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(bipush3).get(),
-            bipush3 => Cb::new().r_mbr().alu_b().w_tos().w_mdr().write().finish().get(),
+            bipush1 => Cb::new().r_sp().alu_b_inc().w_sp().w_mar().next_command(bipush2),
+            bipush2 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(bipush3),
+            bipush3 => Cb::new().r_mbr().alu_b().w_tos().w_mdr().write().finish(),
 
-            iload1 => Cb::new().r_lv().alu_b().w_h().next_command(iload2).get(),
-            iload2 => Cb::new().r_mbru().alu_sum().w_mar().read().next_command(iload3).get(),
-            iload3 => Cb::new().r_sp().alu_b_inc().w_sp().w_mar().next_command(iload4).get(),
-            iload4 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().write().next_command(iload5).get(),
-            iload5 => Cb::new().r_mdr().alu_b().w_tos().finish().get(),
+            iload1 => Cb::new().r_lv().alu_b().w_h().next_command(iload2),
+            iload2 => Cb::new().r_mbru().alu_sum().w_mar().read().next_command(iload3),
+            iload3 => Cb::new().r_sp().alu_b_inc().w_sp().w_mar().next_command(iload4),
+            iload4 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().write().next_command(iload5),
+            iload5 => Cb::new().r_mdr().alu_b().w_tos().finish(),
 
-            istore1 => Cb::new().r_lv().alu_b().w_h().next_command(istore2).get(),
-            istore2 => Cb::new().r_mbru().alu_sum().w_mar().next_command(istore3).get(),
-            istore3 => Cb::new().r_tos().alu_b().w_mdr().write().next_command(istore4).get(),
-            istore4 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(istore5).get(),
-            istore5 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(istore6).get(),
-            istore6 => Cb::new().r_mdr().alu_b().w_tos().finish().get(),
+            istore1 => Cb::new().r_lv().alu_b().w_h().next_command(istore2),
+            istore2 => Cb::new().r_mbru().alu_sum().w_mar().next_command(istore3),
+            istore3 => Cb::new().r_tos().alu_b().w_mdr().write().next_command(istore4),
+            istore4 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(istore5),
+            istore5 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(istore6),
+            istore6 => Cb::new().r_mdr().alu_b().w_tos().finish(),
 
-            wide1 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(wide2).get(),
-            wide2 => Cb::new().jmpc().next_command_wide_jump().get(),
-            wide_iload1 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(wide_iload2).get(),
-            wide_iload2 => Cb::new().r_mbru().alu_b().sll8().w_h().next_command(wide_iload3).get(),
-            wide_iload3 => Cb::new().r_mbru().alu_or().w_h().next_command(wide_iload4).get(),
-            wide_iload4 => Cb::new().r_lv().alu_sum().w_mar().read().next_command(iload3).get(),
-            wide_istore1 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(wide_istore2).get(),
-            wide_istore2 => Cb::new().r_mbru().alu_b().sll8().w_h().next_command(wide_istore3).get(),
-            wide_istore3 => Cb::new().r_mbru().alu_or().w_h().next_command(wide_istore4).get(),
-            wide_istore4 => Cb::new().r_lv().alu_sum().w_mar().read().next_command(istore3).get(),
+            wide1 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(wide2),
+            wide2 => Cb::new().jmpc().next_command_wide_jump(),
+            wide_iload1 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(wide_iload2),
+            wide_iload2 => Cb::new().r_mbru().alu_b().sll8().w_h().next_command(wide_iload3),
+            wide_iload3 => Cb::new().r_mbru().alu_or().w_h().next_command(wide_iload4),
+            wide_iload4 => Cb::new().r_lv().alu_sum().w_mar().read().next_command(iload3),
+            wide_istore1 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(wide_istore2),
+            wide_istore2 => Cb::new().r_mbru().alu_b().sll8().w_h().next_command(wide_istore3),
+            wide_istore3 => Cb::new().r_mbru().alu_or().w_h().next_command(wide_istore4),
+            wide_istore4 => Cb::new().r_lv().alu_sum().w_mar().read().next_command(istore3),
         }
     }
 }
@@ -156,19 +156,22 @@ struct Cb {
 impl Cb {
     fn new() -> Cb { Cb { command: [false; 36] } }
 
-    fn finish(&mut self) -> &mut Cb { self.next_command(Main1) }
+    fn finish(&mut self) -> [bool; 36] {
+        self.next_command(Main1);
+        return self.command;
+    }
 
-    fn next_command(&mut self, addr: MicroAsm) -> &mut Cb {
+    fn next_command(&mut self, addr: MicroAsm) -> [bool; 36] {
         let decoded = fast_decode(addr as i32);
         for x in 0..9 {
             self.command[x] = decoded[x];
         }
-        return self;
+        return self.command;
     }
 
-    fn next_command_wide_jump(&mut self) -> &mut Cb {
+    fn next_command_wide_jump(&mut self) -> [bool; 36] {
         self.command[0] = true;
-        return self;
+        return self.command;
     }
 
     fn jmpc(&mut self) -> &mut Cb { self.bit(9) }
