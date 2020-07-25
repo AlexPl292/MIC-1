@@ -78,6 +78,25 @@ pub enum MicroAsm {
     wide_istore2 = ISTORE as isize + 0x100 + 1,
     wide_istore3 = ISTORE as isize + 0x100 + 2,
     wide_istore4 = ISTORE as isize + 0x100 + 3,
+
+    ldc_w1 = LDC_W as isize,
+    ldc_w2 = LDC_W as isize + 1,
+    ldc_w3 = LDC_W as isize + 2 + 5,
+    ldc_w4 = LDC_W as isize + 3 + 6,
+
+    iinc1 = IINC as isize,
+    iinc2 = IINC as isize + 1,
+    iinc3 = IINC as isize + 2,
+    iinc4 = IINC as isize + 3,
+    iinc5 = IINC as isize + 4,
+    iinc6 = IINC as isize + 5,
+
+    goto1 = GOTO as isize,
+    goto2 = GOTO as isize + 1,
+    goto3 = GOTO as isize + 2,
+    goto4 = GOTO as isize + 3,
+    goto5 = GOTO as isize + 4,
+    goto6 = GOTO as isize + 5,
 }
 
 impl MicroAsm {
@@ -145,6 +164,25 @@ impl MicroAsm {
             wide_istore2 => Cb::new().r_mbru().alu_b().sll8().w_h().next_command(wide_istore3),
             wide_istore3 => Cb::new().r_mbru().alu_or().w_h().next_command(wide_istore4),
             wide_istore4 => Cb::new().r_lv().alu_sum().w_mar().read().next_command(istore3),
+
+            ldc_w1 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(ldc_w2),
+            ldc_w2 => Cb::new().r_mbru().alu_b().sll8().w_h().next_command(ldc_w3),
+            ldc_w3 => Cb::new().r_mbru().alu_or().w_h().next_command(ldc_w4),
+            ldc_w4 => Cb::new().r_cpp().alu_sum().w_mar().read().next_command(iload3),
+
+            iinc1 => Cb::new().r_lv().alu_b().w_h().next_command(iinc2),
+            iinc2 => Cb::new().r_mbru().alu_sum().w_mar().read().next_command(iinc3),
+            iinc3 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(iinc4),
+            iinc4 => Cb::new().r_mdr().alu_b().w_h().next_command(iinc5),
+            iinc5 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(iinc6),
+            iinc6 => Cb::new().r_mbr().alu_sum().w_mdr().write().finish(),
+
+            goto1 => Cb::new().r_pc().alu_b_dec().w_opc().next_command(goto2),
+            goto2 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(goto3),
+            goto3 => Cb::new().r_mbr().alu_b().sll8().w_h().next_command(goto4),
+            goto4 => Cb::new().r_mbru().alu_or().w_h().next_command(goto5),
+            goto5 => Cb::new().r_opc().alu_sum().w_pc().fetch().next_command(goto6),
+            goto6 => Cb::new().finish(),
         }
     }
 }
@@ -219,7 +257,7 @@ impl Cb {
     fn r_lv(&mut self) -> &mut Cb { self.bit(32).bit(34) }
     fn r_cpp(&mut self) -> &mut Cb { self.bit(33).bit(34) }
     fn r_tos(&mut self) -> &mut Cb { self.bit(32).bit(33).bit(34) }
-    fn r_ops(&mut self) -> &mut Cb { self.bit(35) }
+    fn r_opc(&mut self) -> &mut Cb { self.bit(35) }
 
     fn get(&self) -> [bool; 36] { self.command }
 
