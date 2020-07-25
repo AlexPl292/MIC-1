@@ -95,8 +95,8 @@ pub enum MicroAsm {
     goto2 = GOTO as isize + 1,
     goto3 = GOTO as isize + 2,
     goto4 = GOTO as isize + 3,
-    goto5 = GOTO as isize + 4,
-    goto6 = GOTO as isize + 5,
+    goto5 = GOTO as isize + 4 + 3,
+    goto6 = GOTO as isize + 5 + 4,
 
     iflt1 = IFLT as isize,
     iflt2 = IFLT as isize + 1,
@@ -119,6 +119,38 @@ pub enum MicroAsm {
     F2 = 0x3,
     F3 = 0x4,
     T = 0x102,
+
+    invokevirtual1 = INVOKEVIRTUAL as isize,
+    invokevirtual2 = INVOKEVIRTUAL as isize + 1,
+    invokevirtual3 = INVOKEVIRTUAL as isize + 2,
+    invokevirtual4 = INVOKEVIRTUAL as isize + 3,
+    invokevirtual5 = INVOKEVIRTUAL as isize + 4,
+    invokevirtual6 = INVOKEVIRTUAL as isize + 5,
+    invokevirtual7 = INVOKEVIRTUAL as isize + 6,
+    invokevirtual8 = INVOKEVIRTUAL as isize + 7,
+    invokevirtual9 = INVOKEVIRTUAL as isize + 8,
+    invokevirtual10 = INVOKEVIRTUAL as isize + 9,
+    invokevirtual11 = INVOKEVIRTUAL as isize + 10,
+    invokevirtual12 = INVOKEVIRTUAL as isize + 11,
+    invokevirtual13 = INVOKEVIRTUAL as isize + 12,
+    invokevirtual14 = INVOKEVIRTUAL as isize + 13,
+    invokevirtual15 = INVOKEVIRTUAL as isize + 14 + 3,
+    invokevirtual16 = INVOKEVIRTUAL as isize + 15 + 4,
+    invokevirtual17 = INVOKEVIRTUAL as isize + 16 + 5,
+    invokevirtual18 = INVOKEVIRTUAL as isize + 17 + 6,
+    invokevirtual19 = INVOKEVIRTUAL as isize + 18 + 7,
+    invokevirtual20 = INVOKEVIRTUAL as isize + 19 + 8,
+    invokevirtual21 = INVOKEVIRTUAL as isize + 20 + 9,
+    invokevirtual22 = INVOKEVIRTUAL as isize + 21 + 10,
+
+    ireturn1 = IRETURN as isize,
+    ireturn2 = IRETURN as isize + 1 + 5,
+    ireturn3 = IRETURN as isize + 2 + 6,
+    ireturn4 = IRETURN as isize + 3 + 39,
+    ireturn5 = IRETURN as isize + 4 + 40,
+    ireturn6 = IRETURN as isize + 5 + 41,
+    ireturn7 = IRETURN as isize + 6 + 42,
+    ireturn8 = IRETURN as isize + 7 + 43,
 }
 
 impl MicroAsm {
@@ -227,6 +259,38 @@ impl MicroAsm {
             F => Cb::new().r_pc().alu_b_inc().w_pc().next_command(F2),
             F2 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(F3),
             F3 => Cb::new().finish(),
+
+            invokevirtual1 => Cb::new().r_pc().inc().w_pc().fetch().next_command(invokevirtual2),
+            invokevirtual2 => Cb::new().r_mbru().alu_b().sll8().w_h().next_command(invokevirtual3),
+            invokevirtual3 => Cb::new().r_mbru().alu_or().w_h().next_command(invokevirtual4),
+            invokevirtual4 => Cb::new().r_cpp().alu_sum().w_mar().read().next_command(invokevirtual5),
+            invokevirtual5 => Cb::new().r_pc().alu_b_inc().w_opc().next_command(invokevirtual6),
+            invokevirtual6 => Cb::new().r_mdr().alu_b().w_pc().fetch().next_command(invokevirtual7),
+            invokevirtual7 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(invokevirtual8),
+            invokevirtual8 => Cb::new().r_mbru().alu_b().sll8().w_h().next_command(invokevirtual9),
+            invokevirtual9 => Cb::new().r_mbru().alu_or().w_h().next_command(invokevirtual10),
+            invokevirtual10 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(invokevirtual11),
+            invokevirtual11 => Cb::new().r_sp().alu_sub().w_tos().next_command(invokevirtual12),
+            invokevirtual12 => Cb::new().r_tos().alu_b_inc().w_mar().w_tos().next_command(invokevirtual13),
+            invokevirtual13 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(invokevirtual14),
+            invokevirtual14 => Cb::new().r_mbru().alu_b().sll8().w_h().next_command(invokevirtual15),
+            invokevirtual15 => Cb::new().r_mbru().alu_or().w_h().next_command(invokevirtual16),
+            invokevirtual16 => Cb::new().r_sp().alu_sum_inc().w_mdr().write().next_command(invokevirtual17),
+            invokevirtual17 => Cb::new().r_mdr().alu_b().w_sp().w_mar().next_command(invokevirtual18),
+            invokevirtual18 => Cb::new().r_opc().alu_b().w_mdr().write().next_command(invokevirtual19),
+            invokevirtual19 => Cb::new().r_sp().alu_b_inc().w_sp().w_mar().next_command(invokevirtual20),
+            invokevirtual20 => Cb::new().r_lv().alu_b().w_mdr().write().next_command(invokevirtual21),
+            invokevirtual21 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(invokevirtual22),
+            invokevirtual22 => Cb::new().r_tos().alu_b().w_lv().finish(),
+
+            ireturn1 => Cb::new().r_lv().alu_b().w_sp().w_mar().read().next_command(ireturn2),
+            ireturn2 => Cb::new().next_command(ireturn3),
+            ireturn3 => Cb::new().r_mdr().alu_b().w_mar().w_lv().read().next_command(ireturn4),
+            ireturn4 => Cb::new().r_lv().alu_b_inc().w_mar().next_command(ireturn5),
+            ireturn5 => Cb::new().r_mdr().alu_b().w_pc().read().fetch().next_command(ireturn6),
+            ireturn6 => Cb::new().r_sp().alu_b().w_mar().next_command(ireturn7),
+            ireturn7 => Cb::new().r_mdr().alu_b().w_lv().next_command(ireturn8),
+            ireturn8 => Cb::new().r_tos().alu_b().w_mdr().write().finish(),
         }
     }
 }
@@ -274,6 +338,7 @@ impl Cb {
     fn alu_b_dec(&mut self) -> &mut Cb { self.f0().f1().enb().inva() }
     fn alu_b_inc(&mut self) -> &mut Cb { self.f0().f1().enb().inc() }
     fn alu_sum(&mut self) -> &mut Cb { self.f0().f1().ena().enb() }
+    fn alu_sum_inc(&mut self) -> &mut Cb { self.f0().f1().ena().enb().inc() }
     fn alu_sub(&mut self) -> &mut Cb { self.f0().f1().ena().enb().inva().inc() }
     fn alu_and(&mut self) -> &mut Cb { self.ena().enb() }
     fn alu_or(&mut self) -> &mut Cb { self.f1().ena().enb() }
