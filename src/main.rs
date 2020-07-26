@@ -8,6 +8,7 @@ use crate::microasm::MicroAsm;
 use strum::IntoEnumIterator;
 use crate::asm::IjvmCommand::IADD;
 
+mod shifter;
 mod asm;
 mod main_memory;
 mod microasm;

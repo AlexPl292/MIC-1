@@ -7,6 +7,7 @@ use crate::memory::{Memory512x36, Register32, Register36, Register9};
 use crate::processor_elements::{BBusControls, CBusControls};
 use crate::microasm::MicroAsm;
 use strum::IntoEnumIterator;
+use crate::shifter::{sll8, sra1};
 
 impl Register36 {
     fn mir_jmpc(self) -> bool { self.get()[9] }
@@ -38,6 +39,9 @@ impl Register36 {
         code.copy_from_slice(&self.get()[20..29]);
         CBusControls::new(code)
     }
+
+    fn mir_ssl8(self) -> bool { self.get()[12] }
+    fn mir_sra1(self) -> bool { self.get()[13] }
 }
 
 pub struct Mic1 {
@@ -127,9 +131,11 @@ impl Mic1 {
         let a_bus = Bus32::from(self.h.read(true));
 
         // Calculate C bus
-        let (c_bus, _carry) = alu_32(a_bus, b_bus, self.mir.mir_alu_controls());
+        let (mut c_bus, _carry) = alu_32(a_bus, b_bus, self.mir.mir_alu_controls());
 
-        //----- Shifting missed
+        // Shifting
+        c_bus = sll8(c_bus, self.mir.mir_ssl8());
+        c_bus = sra1(c_bus, self.mir.mir_sra1());
 
         // Write C bus into registers
         let c_bus_controls = self.mir.mir_c_bus_controls();
