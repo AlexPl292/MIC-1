@@ -11,6 +11,8 @@ use crate::shifter::{sll8, sra1};
 
 impl Register36 {
     fn mir_jmpc(self) -> bool { self.get()[9] }
+    fn mir_jamn(self) -> bool { self.get()[10] }
+    fn mir_jamz(self) -> bool { self.get()[11] }
 
     fn mir_addr(self) -> [bool; 9] {
         let mut res = [false; 9];
@@ -131,7 +133,7 @@ impl Mic1 {
         let a_bus = Bus32::from(self.h.read(true));
 
         // Calculate C bus
-        let (mut c_bus, _carry) = alu_32(a_bus, b_bus, self.mir.mir_alu_controls());
+        let (mut c_bus, n_bit, z_bit) = alu_32(a_bus, b_bus, self.mir.mir_alu_controls());
 
         // Shifting
         c_bus = sll8(c_bus, self.mir.mir_ssl8());
@@ -145,10 +147,15 @@ impl Mic1 {
 
         // O operation
         // Select next command
-        let next_command = self.o();
+        let mut next_command = self.o();
+        next_command[8] |= self.f(z_bit, n_bit);
         self.mpc.update(next_command, true);
 
         return;
+    }
+
+    fn f(&self, z: bool, n: bool) -> bool {
+        self.mir.mir_jamz() && z || self.mir.mir_jamn() && n
     }
 
     fn o(&self) -> [bool; 9] {

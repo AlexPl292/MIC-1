@@ -58,7 +58,7 @@ fn alu_unit(a: bool, b: bool, inv_a: bool, en_a: bool, en_b: bool, carry_in: boo
     (res, carry_out)
 }
 
-pub fn alu_32(a: Bus32, b: Bus32, control: AluControl) -> (Bus32, bool) {
+pub fn alu_32(a: Bus32, b: Bus32, control: AluControl) -> (Bus32, bool, bool) {
     let mut result = [false; 32];
 
     let mut carry = control.inc;
@@ -68,5 +68,11 @@ pub fn alu_32(a: Bus32, b: Bus32, control: AluControl) -> (Bus32, bool) {
         carry = alu_carry;
     }
 
-    (Bus32::from(result), carry)
+    let n_bit = result[31];
+    let mut z_bit = false;
+    for i in 0..32 {
+        z_bit |= result[i];
+    }
+
+    (Bus32::from(result), n_bit, z_bit)
 }
