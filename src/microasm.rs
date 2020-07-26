@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use std::iter::Map;
 
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
+
 use crate::asm::IjvmCommand;
 use crate::asm::IjvmCommand::*;
 use crate::main_memory::fast_decode;
@@ -15,7 +18,7 @@ use crate::microasm::MicroAsm::*;
  *                           third - shifting if we can't put this command at this place
  */
 #[allow(non_camel_case_types)]
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, EnumIter, Debug)]
 pub enum MicroAsm {
     Main1 = 1,
 
@@ -155,7 +158,7 @@ pub enum MicroAsm {
 
 impl MicroAsm {
     //noinspection SpellCheckingInspection
-    fn command(&self) -> [bool; 36] {
+    pub fn command(&self) -> [bool; 36] {
         match *self {
             Main1 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().jmpc().get(),
 

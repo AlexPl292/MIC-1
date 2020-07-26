@@ -1,9 +1,12 @@
 use crate::bus::Bus32;
 use crate::decoders::{decoder_4x9, decoder_9x512};
-use crate::main_memory::{fast_decode, MainMemory};
-use crate::memory::{Memory512x36, Register32};
-use crate::microasm::MicroAsm::{iadd1, iadd2, iadd3};
+use crate::main_memory::{fast_decode, MainMemory, fast_encode};
+use crate::memory::{Memory512x36, Register32, Register9};
+use crate::microasm::MicroAsm::{iadd1, iadd2, iadd3, Main1};
 use crate::processor::Mic1;
+use crate::microasm::MicroAsm;
+use strum::IntoEnumIterator;
+use crate::asm::IjvmCommand::IADD;
 
 mod asm;
 mod main_memory;
@@ -19,32 +22,61 @@ mod elements;
 fn main() {
     let mut memory = MainMemory::initialize();
 
+    /*
+    Stack start = 10
+    LV = 10
+
+    program start = 100
+    */
+
     // Stack
-    memory.write_data(1, 10);
-    memory.write_data(2, 11);
+    memory.write_data(12, 10);
+    memory.write_data(4, 11);
 
     // Program
-    memory.write_data(0, 100);
+    memory.write_data(IADD as i32, 100);
 
-    // let commands = commands();
-    let mut control_memory = Memory512x36::new();
-
-    // control_memory.write_data(commands.get(&iadd1).unwrap().clone(), 0);
-    // control_memory.write_data(commands.get(&iadd2).unwrap().clone(), 1);
-    // control_memory.write_data(commands.get(&iadd3).unwrap().clone(), 2);
+    let mut control_memory = make_control_memory();
 
     let mut tos = Register32::new();
-    tos.update_from_bus(&Bus32::from(fast_decode(2)), true);
+    tos.update_from_bus(&Bus32::from(fast_decode(4)), true);
 
     let mut pc = Register32::new();
-    pc.update_from_bus(&Bus32::from(fast_decode(100)), true);
+    pc.update_from_bus(&Bus32::from(fast_decode(99)), true);
 
     let mut sp = Register32::new();
     sp.update_from_bus(&Bus32::from(fast_decode(11)), true);
 
-    let mut mic1 = Mic1::init(memory, control_memory, tos, pc, sp);
+    let mut mpc = Register9::new();
+    let mut mpc_data = [false; 9];
+    let decoded = fast_decode(Main1 as i32);
+    for x in 0..9 {
+        mpc_data[x] = decoded[x];
+    }
+    mpc.update(mpc_data, true);
+
+    let mut mic1 = Mic1::init(memory, control_memory, tos, pc, sp, mpc);
 
     mic1.execute_command();
     mic1.execute_command();
     mic1.execute_command();
+    mic1.execute_command();
+    mic1.execute_command();
+    mic1.execute_command();
+
+    let mut res = [false; 32];
+    for i in 0..32 {
+        res[i] = mic1.tos.registers[i].state;
+    }
+    let tos_res = fast_encode(res);
+    print!("{:?}", tos_res)
+}
+
+fn make_control_memory() -> Memory512x36 {
+    let mut control_memory = Memory512x36::new();
+
+    for command in MicroAsm::iter() {
+        control_memory.write_data(command.command(), command as usize)
+    }
+    return control_memory;
 }

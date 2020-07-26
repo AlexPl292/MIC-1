@@ -1,10 +1,12 @@
 use crate::alu::{alu_32, AluControl};
 use crate::bus::{Bus32, Bus36, Bus9};
 use crate::decoders::decoder_4x9;
-use crate::main_memory::{MainMemory, ReadState};
+use crate::main_memory::{MainMemory, ReadState, fast_encode};
 use crate::main_memory::ReadState::{NoRead, ReadInitialized, ReadInProgress};
 use crate::memory::{Memory512x36, Register32, Register36, Register9};
 use crate::processor_elements::{BBusControls, CBusControls};
+use crate::microasm::MicroAsm;
+use strum::IntoEnumIterator;
 
 impl Register36 {
     fn mir_jmpc(self) -> bool { self.get()[9] }
@@ -49,7 +51,7 @@ pub struct Mic1 {
     sp: Register32,
     lv: Register32,
     cpp: Register32,
-    tos: Register32,
+    pub tos: Register32,
     opc: Register32,
     h: Register32,
 
@@ -61,10 +63,10 @@ pub struct Mic1 {
 }
 
 impl Mic1 {
-    pub fn init(main_memory: MainMemory, control_memory: Memory512x36, tos: Register32, pc: Register32, sp: Register32) -> Mic1 {
+    pub fn init(main_memory: MainMemory, control_memory: Memory512x36, tos: Register32, pc: Register32, sp: Register32, mpc: Register9) -> Mic1 {
         Mic1 {
             mir: Register36::new(),
-            mpc: Register9::new(),
+            mpc,
             mar: Register32::new(),
             mdr: Register32::new(),
             pc,
@@ -83,6 +85,7 @@ impl Mic1 {
     }
 
     pub fn execute_command(&mut self) {
+        Mic1::print_reg(&self.pc, "PC: ");
         if self.read_state == ReadInProgress {
             self.read_state = NoRead;
             self.mdr.update_from_bus(&Bus32::from(self.main_memory.read(self.mar.read(true))), true);
@@ -93,6 +96,7 @@ impl Mic1 {
         if self.fetch_state == ReadInProgress {
             self.fetch_state = NoRead;
             self.mbr.update_from_bus(&Bus32::from(self.main_memory.read(self.pc.read(true))), true);
+            Mic1::print_reg(&self.mbr, "MBR: ");
         } else if self.fetch_state == ReadInitialized {
             self.fetch_state = ReadInProgress;
         }
@@ -103,6 +107,7 @@ impl Mic1 {
 
         // Write new command to mir register
         self.mir.update_from_bus(&new_command, true);
+        self.print_current_command();
 
         // Initialize reads
         // XXX
@@ -181,5 +186,32 @@ impl Mic1 {
         self.pc.update_from_bus(bus, controls.pc());
         self.mdr.update_from_bus(bus, controls.mdr());
         self.mar.update_from_bus(bus, controls.mar());
+    }
+
+    fn print_current_command(&self) {
+        let mut current_mir = self.mir.read(true);
+
+        for comm in MicroAsm::iter() {
+            if Mic1::arrays_equals(&comm.command(), &current_mir) {
+                println!("Current command: {:?}", comm);
+                return;
+            }
+        }
+        panic!("Command not found")
+    }
+
+    fn print_reg(reg: &Register32, str: &str) {
+        let pc_value = reg.read(true);
+        let encoded_value = fast_encode(pc_value);
+        println!("{} {:?}", str, encoded_value)
+    }
+
+    fn arrays_equals(first: &[bool; 36], second: &[bool; 36]) -> bool {
+        for i in 0..36 {
+            if first[i] != second[i] {
+                return false;
+            }
+        }
+        return true;
     }
 }
