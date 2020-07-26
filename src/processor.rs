@@ -171,13 +171,18 @@ impl Mic1 {
 
         bus.connect(self.mdr.read(controls.mdr()));
         bus.connect(self.pc.read(controls.pc()));
-        bus.connect(self.mbr.read(controls.mbr1()));
-        bus.connect(self.mbr.read(controls.mbr2()));
+        bus.connect(self.mbr.read(controls.mbr()));
         bus.connect(self.sp.read(controls.sp()));
         bus.connect(self.lv.read(controls.lv()));
         bus.connect(self.cpp.read(controls.cpp()));
         bus.connect(self.tos.read(controls.tos()));
         bus.connect(self.opc.read(controls.opc()));
+
+        let mut mbru_value = self.mbr.read(controls.mbru());
+        for x in 8..32 {
+            mbru_value[x] = mbru_value[7];
+        }
+        bus.connect(mbru_value);
 
         bus
     }
