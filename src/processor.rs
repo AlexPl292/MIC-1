@@ -52,7 +52,7 @@ pub struct Mic1 {
 
     mar: Register32,
     mdr: Register32,
-    pc: Register32,
+    pub pc: Register32,
     mbr: Register32,
     sp: Register32,
     lv: Register32,
@@ -220,7 +220,7 @@ impl Mic1 {
 
     fn print_reg(reg: &Register32, str: &str) {
         let pc_value = reg.read(true);
-        let encoded_value = fast_encode(pc_value);
+        let encoded_value = fast_encode(&pc_value);
         println!("{} {:?}", str, encoded_value)
     }
 

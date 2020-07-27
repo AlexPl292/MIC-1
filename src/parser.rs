@@ -8,7 +8,8 @@ pub fn parse(program: &str) -> Vec<i32> {
     let program_lines = program_lines.filter(|x| !x.is_empty());
     for line in program_lines {
         let mut commands = line.split(" ").filter(|x| !x.is_empty());
-        let main_command = commands.next().unwrap();
+        let r = commands.next();
+        let main_command = r.unwrap();
         res.push(IjvmCommand::parse(main_command) as i32);
         for command in commands {
             res.push(i32::from_str_radix(command.trim_start_matches("0x"), 16).unwrap())

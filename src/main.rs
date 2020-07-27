@@ -22,38 +22,44 @@ mod decoders;
 mod alu;
 mod elements;
 
+const PROGRAM: &str = r#"
+        IADD
+"#;
+
+const PROGRAM_START: usize = 100;
+
 fn main() {
     let mut memory = MainMemory::initialize();
 
     /*
     Stack start = 10
     LV = 10
-
-    program start = 100
     */
 
     // Stack
     memory.write_data(12, 10);
     memory.write_data(4, 11);
 
+    let sp_value = 11;
+
     // Program
-    let commands = parse("IADD");
-    let mut p_counter = 100;
-    for command in commands {
-        memory.write_data(command, p_counter);
+    let commands = parse(PROGRAM);
+    let mut p_counter = PROGRAM_START;
+    for command in &commands {
+        memory.write_data(*command, p_counter);
         p_counter += 1;
     }
 
     let mut control_memory = make_control_memory();
 
     let mut tos = Register32::new();
-    tos.update_from_bus(&Bus32::from(fast_decode(4)), true);
+    tos.update_from_bus(&Bus32::from(fast_decode(fast_encode(&memory.read(fast_decode(sp_value))))), true);
 
     let mut pc = Register32::new();
     pc.update_from_bus(&Bus32::from(fast_decode(99)), true);
 
     let mut sp = Register32::new();
-    sp.update_from_bus(&Bus32::from(fast_decode(11)), true);
+    sp.update_from_bus(&Bus32::from(fast_decode(sp_value)), true);
 
     let mut mpc = Register9::new();
     let mut mpc_data = [false; 9];
@@ -65,18 +71,18 @@ fn main() {
 
     let mut mic1 = Mic1::init(memory, control_memory, tos, pc, sp, mpc);
 
-    mic1.execute_command();
-    mic1.execute_command();
-    mic1.execute_command();
-    mic1.execute_command();
-    mic1.execute_command();
-    mic1.execute_command();
+    let last_command = commands.len() + 1 + PROGRAM_START;
+    let mut pc_counter = 0;
+    while pc_counter < last_command {
+        mic1.execute_command();
+        pc_counter = fast_encode(&mic1.pc.get()) as usize;
+    }
 
     let mut res = [false; 32];
     for i in 0..32 {
         res[i] = mic1.tos.registers[i].state;
     }
-    let tos_res = fast_encode(res);
+    let tos_res = fast_encode(&res);
     print!("{:?}", tos_res)
 }
 

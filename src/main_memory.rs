@@ -10,7 +10,7 @@ impl MainMemory {
     }
 
     pub fn read(&self, addr: [bool; 32]) -> [bool; 32] {
-        let i_addr = fast_encode(addr);
+        let i_addr = fast_encode(&addr);
         let data = self.cells[i_addr as usize];
         fast_decode(data)
     }
@@ -24,7 +24,7 @@ pub fn fast_decode(number: i32) -> [bool; 32] {
     res
 }
 
-pub fn fast_encode(data: [bool; 32]) -> i32 {
+pub fn fast_encode(data: &[bool; 32]) -> i32 {
     let mut res = 0;
 
     for i in 0..32 {
