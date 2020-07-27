@@ -1,4 +1,7 @@
 #![allow(non_camel_case_types)]
+
+use crate::asm::IjvmCommand::{*};
+
 //noinspection SpellCheckingInspection
 pub enum IjvmCommand {
     BIPUSH = 0x10,
@@ -21,4 +24,32 @@ pub enum IjvmCommand {
     POP = 0x57,
     SWAP = 0x5F,
     WIDE = 0xC4,
+}
+
+impl IjvmCommand {
+    pub fn parse(str: &str) -> IjvmCommand {
+        match str {
+            "BIPUSH" => BIPUSH,
+            "DUP" => DUP,
+            "GOTO" => GOTO,
+            "IADD" => IADD,
+            "IAND" => IAND,
+            "IFEQ" => IFEQ,
+            "IFLT" => IFLT,
+            "IF_ICMPEQ" => IF_ICMPEQ,
+            "IINC" => IINC,
+            "ILOAD" => ILOAD,
+            "INVOKEVIRTUAL" => INVOKEVIRTUAL,
+            "IOR" => IOR,
+            "IRETURN" => IRETURN,
+            "ISTORE" => ISTORE,
+            "ISUB" => ISUB,
+            "LDC_W" => LDC_W,
+            "NOP" => NOP,
+            "POP" => POP,
+            "SWAP" => SWAP,
+            "WIDE" => WIDE,
+            _ => panic!("Unexpected string")
+        }
+    }
 }

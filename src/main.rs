@@ -7,7 +7,9 @@ use crate::processor::Mic1;
 use crate::microasm::MicroAsm;
 use strum::IntoEnumIterator;
 use crate::asm::IjvmCommand::IADD;
+use crate::parser::parse;
 
+mod parser;
 mod shifter;
 mod asm;
 mod main_memory;
@@ -35,7 +37,12 @@ fn main() {
     memory.write_data(4, 11);
 
     // Program
-    memory.write_data(IADD as i32, 100);
+    let commands = parse("IADD");
+    let mut p_counter = 100;
+    for command in commands {
+        memory.write_data(command, p_counter);
+        p_counter += 1;
+    }
 
     let mut control_memory = make_control_memory();
 
