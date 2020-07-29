@@ -95,6 +95,7 @@ impl Mic1 {
         if self.read_state == ReadInProgress {
             self.read_state = NoRead;
             self.mdr.update_from_bus(&Bus32::from(self.main_memory.read(self.mar.read(true))), true);
+            Mic1::print_reg(&self.mdr, "MDR: ");
         } else if self.read_state == ReadInitialized {
             self.read_state = ReadInProgress;
         }
