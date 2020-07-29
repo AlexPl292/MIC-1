@@ -91,6 +91,15 @@ impl Mic1 {
         }
     }
 
+    pub fn run(&mut self, len_of_command: usize, program_start: usize) {
+        let last_command = len_of_command + 1 + program_start;
+        let mut pc_counter = 0;
+        while pc_counter < last_command {
+            self.execute_command();
+            pc_counter = fast_encode(&self.pc.get()) as usize;
+        }
+    }
+
     pub fn execute_command(&mut self) {
         Mic1::print_reg(&self.pc, "PC: ");
         if self.read_state == ReadInProgress {

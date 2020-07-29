@@ -26,24 +26,34 @@ const PROGRAM: &str = r#"
 
 const PROGRAM_START: usize = 100;
 
+const STACK_START: i32 = 10;
+
 fn main() {
+    let commands = parse(PROGRAM);
+    let mut mic1 = create_processor(&commands, vec![2, 3]);
+
+    mic1.run(commands.len() + 1, PROGRAM_START);
+
+    let tos_res = fast_encode(&mic1.tos.read(true));
+    print!("{:?}", tos_res)
+}
+
+fn create_processor(commands: &Vec<i32>, initial_stack: Vec<i32>) -> Mic1 {
     let mut memory = MainMemory::initialize();
 
-    /*
-    Stack start = 10
-    LV = 10
-    */
-
     // Stack
-    memory.write_data(12, 10);
-    memory.write_data(4, 11);
-
-    let sp_value = 11;
+    let mut stack_pointer = STACK_START;
+    let mut top_of_stack = 0;
+    for stack in initial_stack {
+        memory.write_data(stack, stack_pointer as usize);
+        stack_pointer += 1;
+        top_of_stack = stack;
+    }
+    stack_pointer -= 1;
 
     // Program
-    let commands = parse(PROGRAM);
     let mut p_counter = PROGRAM_START;
-    for command in &commands {
+    for command in commands {
         memory.write_data(*command, p_counter);
         p_counter += 1;
     }
@@ -51,13 +61,13 @@ fn main() {
     let control_memory = make_control_memory();
 
     let mut tos = Register32::new();
-    tos.update_from_bus(&Bus32::from(fast_decode(fast_encode(&memory.read(fast_decode(sp_value))))), true);
+    tos.update_from_bus(&Bus32::from(fast_decode(top_of_stack)), true);
 
     let mut pc = Register32::new();
     pc.update_from_bus(&Bus32::from(fast_decode(99)), true);
 
     let mut sp = Register32::new();
-    sp.update_from_bus(&Bus32::from(fast_decode(sp_value)), true);
+    sp.update_from_bus(&Bus32::from(fast_decode(stack_pointer)), true);
 
     let mut mpc = Register9::new();
     let mut mpc_data = [false; 9];
@@ -67,21 +77,7 @@ fn main() {
     }
     mpc.update(mpc_data, true);
 
-    let mut mic1 = Mic1::init(memory, control_memory, tos, pc, sp, mpc);
-
-    let last_command = commands.len() + 1 + PROGRAM_START;
-    let mut pc_counter = 0;
-    while pc_counter < last_command {
-        mic1.execute_command();
-        pc_counter = fast_encode(&mic1.pc.get()) as usize;
-    }
-
-    let mut res = [false; 32];
-    for i in 0..32 {
-        res[i] = mic1.tos.registers[i].state;
-    }
-    let tos_res = fast_encode(&res);
-    print!("{:?}", tos_res)
+    Mic1::init(memory, control_memory, tos, pc, sp, mpc)
 }
 
 fn make_control_memory() -> Memory512x36 {
