@@ -1,4 +1,4 @@
-use crate::bus::{Bus36, Bus32};
+use crate::bus::{Bus32};
 use crate::decoders::decoder_2x4;
 
 fn adder(a: bool, b: bool, carry_in: bool) -> (bool, bool) {

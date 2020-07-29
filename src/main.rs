@@ -1,13 +1,12 @@
-use crate::bus::Bus32;
-use crate::decoders::{decoder_4x9, decoder_9x512};
-use crate::main_memory::{fast_decode, MainMemory, fast_encode};
-use crate::memory::{Memory512x36, Register32, Register9};
-use crate::microasm::MicroAsm::{iadd1, iadd2, iadd3, Main1};
-use crate::processor::Mic1;
-use crate::microasm::MicroAsm;
 use strum::IntoEnumIterator;
-use crate::asm::IjvmCommand::IADD;
+
+use crate::bus::Bus32;
+use crate::main_memory::{fast_decode, fast_encode, MainMemory};
+use crate::memory::{Memory512x36, Register32, Register9};
+use crate::microasm::MicroAsm;
+use crate::microasm::MicroAsm::Main1;
 use crate::parser::parse;
+use crate::processor::Mic1;
 
 mod parser;
 mod shifter;
@@ -20,7 +19,6 @@ mod bus;
 mod memory;
 mod decoders;
 mod alu;
-mod elements;
 
 const PROGRAM: &str = r#"
         IADD
@@ -50,7 +48,7 @@ fn main() {
         p_counter += 1;
     }
 
-    let mut control_memory = make_control_memory();
+    let control_memory = make_control_memory();
 
     let mut tos = Register32::new();
     tos.update_from_bus(&Bus32::from(fast_decode(fast_encode(&memory.read(fast_decode(sp_value))))), true);

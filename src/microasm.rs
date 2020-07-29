@@ -1,10 +1,5 @@
-use std::collections::HashMap;
-use std::iter::Map;
-
-use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-use crate::asm::IjvmCommand;
 use crate::asm::IjvmCommand::*;
 use crate::main_memory::fast_decode;
 use crate::microasm::MicroAsm::*;

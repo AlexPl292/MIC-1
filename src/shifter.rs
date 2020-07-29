@@ -1,5 +1,4 @@
 use crate::bus::Bus32;
-use std::fs::rename;
 
 fn shift(data: Bus32, left: bool, enabled: bool) -> Bus32 {
     let mut res = Bus32::new();
@@ -17,7 +16,7 @@ fn shift(data: Bus32, left: bool, enabled: bool) -> Bus32 {
 
 pub fn sll8(data: Bus32, enabled: bool) -> Bus32 {
     let mut res: Bus32 = data;
-    for x in 0..8 {
+    for _ in 0..8 {
         res = shift(res, true, enabled);
     }
     return res;

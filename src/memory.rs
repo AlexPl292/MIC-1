@@ -98,14 +98,6 @@ impl Register9 {
         }
         res
     }
-
-    pub fn to_bus(self) -> Bus9 {
-        let mut res = [false; 9];
-        for i in 0..9 {
-            res[i] = self.registers[i].state;
-        }
-        Bus9 { data: res }
-    }
 }
 
 pub struct Memory512x36 {

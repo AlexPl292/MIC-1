@@ -1,5 +1,4 @@
 use crate::asm::IjvmCommand;
-use crate::main;
 
 pub fn parse(program: &str) -> Vec<i32> {
     let mut res = Vec::new();
@@ -21,8 +20,9 @@ pub fn parse(program: &str) -> Vec<i32> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::asm::IjvmCommand::{IADD, ILOAD};
+
+    use super::*;
 
     #[test]
     fn empty_string() {

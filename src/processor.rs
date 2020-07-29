@@ -1,12 +1,13 @@
+use strum::IntoEnumIterator;
+
 use crate::alu::{alu_32, AluControl};
-use crate::bus::{Bus32, Bus36, Bus9};
+use crate::bus::{Bus32, Bus9};
 use crate::decoders::decoder_4x9;
-use crate::main_memory::{MainMemory, ReadState, fast_encode};
+use crate::main_memory::{fast_encode, MainMemory, ReadState};
 use crate::main_memory::ReadState::{NoRead, ReadInitialized, ReadInProgress};
 use crate::memory::{Memory512x36, Register32, Register36, Register9};
-use crate::processor_elements::{BBusControls, CBusControls};
 use crate::microasm::MicroAsm;
-use strum::IntoEnumIterator;
+use crate::processor_elements::{BBusControls, CBusControls};
 use crate::shifter::{sll8, sra1};
 
 impl Register36 {
@@ -208,7 +209,7 @@ impl Mic1 {
     }
 
     fn print_current_command(&self) {
-        let mut current_mir = self.mir.read(true);
+        let current_mir = self.mir.read(true);
 
         for comm in MicroAsm::iter() {
             if Mic1::arrays_equals(&comm.command(), &current_mir) {
