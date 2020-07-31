@@ -55,7 +55,7 @@ pub struct Mic1 {
     mdr: Register32,
     pub pc: Register32,
     mbr: Register32,
-    sp: Register32,
+    pub sp: Register32,
     lv: Register32,
     cpp: Register32,
     pub tos: Register32,
@@ -64,7 +64,7 @@ pub struct Mic1 {
 
     control_memory: Memory512x36,
 
-    main_memory: MainMemory,
+    pub main_memory: MainMemory,
     read_state: ReadState,
     fetch_state: ReadState,
 
@@ -130,12 +130,6 @@ impl Mic1 {
         self.mir.update_from_bus(&new_command, true);
         self.print_current_command();
 
-        // Writing
-        // XXX
-        if self.mir.mir_write() {
-            self.main_memory.write_data(fast_encode(&self.mdr.read(true)), fast_encode(&self.mar.read(true)) as usize)
-        }
-
         // Create B bus
         let b_bus_controls = self.mir.mir_b_bus_controls();
         let decoded_b_bus_controls = BBusControls::new(decoder_4x9(b_bus_controls));
@@ -165,6 +159,12 @@ impl Mic1 {
         if self.mir.mir_fetch() {
             self.fetch_state = ReadInitialized;
             self.pc_to_read = fast_encode(&self.pc.get())
+        }
+
+        // Writing
+        // XXX
+        if self.mir.mir_write() {
+            self.main_memory.write_data(fast_encode(&self.mdr.read(true)), fast_encode(&self.mar.read(true)) as usize)
         }
 
         // O operation

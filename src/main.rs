@@ -155,4 +155,119 @@ mod tests {
         let tos_res = fast_encode(&mic1.tos.read(true));
         assert_eq!(10, tos_res)
     }
+
+    #[test]
+    fn bipush() {
+        let commands = parse("BIPUSH 0x01");
+        let mut mic1 = create_processor(&commands, vec![]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        let tos_res = fast_encode(&mic1.tos.read(true));
+        assert_eq!(1, tos_res)
+    }
+
+    #[test]
+    fn bipush2() {
+        let commands = parse("BIPUSH 0x0B");
+        let mut mic1 = create_processor(&commands, vec![]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        let tos_res = fast_encode(&mic1.tos.read(true));
+        assert_eq!(11, tos_res)
+    }
+
+    #[test]
+    fn swap() {
+        let commands = parse("SWAP");
+        let mut mic1 = create_processor(&commands, vec![1, 2]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![2, 1], &mic1)
+    }
+
+    #[test]
+    fn swap1() {
+        let commands = parse("SWAP");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4, 5]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 2, 3, 5, 4], &mic1)
+    }
+
+    #[test]
+    fn dup() {
+        let commands = parse("DUP");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4, 5]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 2, 3, 4, 5, 5], &mic1)
+    }
+
+    #[test]
+    fn dup2() {
+        let commands = parse("DUP");
+        let mut mic1 = create_processor(&commands, vec![1]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 1], &mic1)
+    }
+
+    #[test]
+    fn pop() {
+        let commands = parse("POP");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4, 5]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 2, 3, 4], &mic1)
+    }
+
+    #[test]
+    fn pop2() {
+        let commands = parse("POP");
+        let mut mic1 = create_processor(&commands, vec![1, 2]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1], &mic1)
+    }
+
+    #[test]
+    fn istore() {
+        let commands = parse("ISTORE 0x1");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 4, 3], &mic1)
+    }
+
+    #[test]
+    fn istore1() {
+        let commands = parse("ISTORE 0x0");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4, 5]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![5, 2, 3, 4], &mic1)
+    }
+/*
+    #[test]
+    fn wide_iload() {
+        let commands = parse("WIDE\nILOAD 0x0 0x0");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4, 5]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 2, 3, 4, 5, 1], &mic1)
+    }
+*/
+    fn assert_stack(expected_stack: Vec<i32>, mic1: &Mic1) {
+        let stack_ptr = fast_encode(&mic1.sp.get());
+        assert_eq!(expected_stack.len() as i32, stack_ptr - STACK_START + 1);
+
+        let tos_res = fast_encode(&mic1.tos.read(true));
+        assert_eq!(expected_stack.last().unwrap(), &tos_res);
+
+        for x in 0..expected_stack.len() {
+            assert_eq!(expected_stack.get(x).unwrap(),
+                       &fast_encode(&mic1.main_memory.read(fast_decode((x + STACK_START as usize) as i32))),
+                       " At index {}", x)
+        }
+    }
 }

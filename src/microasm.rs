@@ -182,7 +182,7 @@ impl MicroAsm {
             pop2 => Cb::new().next_command(pop3), // Waiting for read
             pop3 => Cb::new().r_mdr().alu_b().w_tos().finish(),
 
-            swap1 => Cb::new().r_sp().alu_b_dec().w_sp().w_mar().read().next_command(swap2),
+            swap1 => Cb::new().r_sp().alu_b_dec().w_mar().read().next_command(swap2),
             swap2 => Cb::new().r_sp().alu_b().w_mar().next_command(swap3),
             swap3 => Cb::new().r_mdr().alu_b().w_h().write().next_command(swap4),
             swap4 => Cb::new().r_tos().alu_b().w_mdr().next_command(swap5),
