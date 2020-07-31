@@ -125,4 +125,14 @@ mod tests {
         let tos_res = fast_encode(&mic1.tos.read(true));
         assert_eq!(10, tos_res)
     }
+
+    #[test]
+    fn iload2() {
+        let commands = parse("ILOAD 0x01");
+        let mut mic1 = create_processor(&commands, vec![10, 20, 30]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        let tos_res = fast_encode(&mic1.tos.read(true));
+        assert_eq!(20, tos_res)
+    }
 }
