@@ -3,7 +3,7 @@ use strum::IntoEnumIterator;
 use crate::alu::{alu_32, AluControl};
 use crate::bus::{Bus32, Bus9};
 use crate::decoders::decoder_4x9;
-use crate::main_memory::{fast_encode, MainMemory, ReadState};
+use crate::main_memory::{fast_encode, MainMemory, ReadState, fast_decode};
 use crate::main_memory::ReadState::{NoRead, ReadInitialized, ReadInProgress};
 use crate::memory::{Memory512x36, Register32, Register36, Register9};
 use crate::microasm::MicroAsm;
@@ -67,10 +67,13 @@ pub struct Mic1 {
     main_memory: MainMemory,
     read_state: ReadState,
     fetch_state: ReadState,
+
+    mar_to_read: i32,
+    pc_to_read: i32,
 }
 
 impl Mic1 {
-    pub fn init(main_memory: MainMemory, control_memory: Memory512x36, tos: Register32, pc: Register32, sp: Register32, mpc: Register9) -> Mic1 {
+    pub fn init(main_memory: MainMemory, control_memory: Memory512x36, tos: Register32, pc: Register32, sp: Register32, lv: Register32, mpc: Register9) -> Mic1 {
         Mic1 {
             mir: Register36::new(),
             mpc,
@@ -79,7 +82,7 @@ impl Mic1 {
             pc,
             mbr: Register32::new(),
             sp,
-            lv: Register32::new(),
+            lv,
             cpp: Register32::new(),
             tos,
             opc: Register32::new(),
@@ -88,6 +91,8 @@ impl Mic1 {
             main_memory,
             read_state: ReadState::NoRead,
             fetch_state: ReadState::NoRead,
+            mar_to_read: 0,
+            pc_to_read: 0
         }
     }
 
@@ -104,7 +109,7 @@ impl Mic1 {
         Mic1::print_reg(&self.pc, "PC: ");
         if self.read_state == ReadInProgress {
             self.read_state = NoRead;
-            self.mdr.update_from_bus(&Bus32::from(self.main_memory.read(self.mar.read(true))), true);
+            self.mdr.update_from_bus(&Bus32::from(self.main_memory.read(fast_decode(self.mar_to_read))), true);
             Mic1::print_reg(&self.mdr, "MDR: ");
         } else if self.read_state == ReadInitialized {
             self.read_state = ReadInProgress;
@@ -112,8 +117,7 @@ impl Mic1 {
 
         if self.fetch_state == ReadInProgress {
             self.fetch_state = NoRead;
-            self.mbr.update_from_bus(&Bus32::from(self.main_memory.read(self.pc.read(true))), true);
-            Mic1::print_reg(&self.mbr, "MBR: ");
+            self.mbr.update_from_bus(&Bus32::from(self.main_memory.read(fast_decode(self.pc_to_read))), true);
         } else if self.fetch_state == ReadInitialized {
             self.fetch_state = ReadInProgress;
         }
@@ -126,13 +130,10 @@ impl Mic1 {
         self.mir.update_from_bus(&new_command, true);
         self.print_current_command();
 
-        // Initialize reads
+        // Writing
         // XXX
-        if self.mir.mir_read() {
-            self.read_state = ReadInitialized;
-        }
-        if self.mir.mir_fetch() {
-            self.fetch_state = ReadInitialized;
+        if self.mir.mir_write() {
+            self.main_memory.write_data(fast_encode(&self.mdr.read(true)), fast_encode(&self.mar.read(true)) as usize)
         }
 
         // Create B bus
@@ -154,7 +155,17 @@ impl Mic1 {
         let c_bus_controls = self.mir.mir_c_bus_controls();
         self.run_c_bus(&c_bus, c_bus_controls);
 
-        //------ N, Z bits missed
+        // Initialize reads
+        // XXX
+        if self.mir.mir_read() {
+            self.read_state = ReadInitialized;
+            self.mar_to_read = fast_encode(&self.mar.get());
+            println!("MAR_TO_READ: {}", self.mar_to_read);
+        }
+        if self.mir.mir_fetch() {
+            self.fetch_state = ReadInitialized;
+            self.pc_to_read = fast_encode(&self.pc.get())
+        }
 
         // O operation
         // Select next command
@@ -218,12 +229,15 @@ impl Mic1 {
     }
 
     fn print_current_command(&self) {
+        println!("Current command: {:?}", self.get_current_command())
+    }
+
+    fn get_current_command(&self) -> MicroAsm {
         let current_mir = self.mir.read(true);
 
         for comm in MicroAsm::iter() {
             if Mic1::arrays_equals(&comm.command(), &current_mir) {
-                println!("Current command: {:?}", comm);
-                return;
+                return comm;
             }
         }
         panic!("Command not found")
