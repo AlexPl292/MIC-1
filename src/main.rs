@@ -135,4 +135,24 @@ mod tests {
         let tos_res = fast_encode(&mic1.tos.read(true));
         assert_eq!(20, tos_res)
     }
+
+    #[test]
+    fn sub() {
+        let commands = parse("ISUB");
+        let mut mic1 = create_processor(&commands, vec![2, 1]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        let tos_res = fast_encode(&mic1.tos.read(true));
+        assert_eq!(1, tos_res)
+    }
+
+    #[test]
+    fn sub2() {
+        let commands = parse("ISUB");
+        let mut mic1 = create_processor(&commands, vec![20, 10]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        let tos_res = fast_encode(&mic1.tos.read(true));
+        assert_eq!(10, tos_res)
+    }
 }
