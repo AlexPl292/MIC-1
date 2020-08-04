@@ -1,3 +1,9 @@
+#[cfg(test)]
+extern crate quickcheck;
+#[cfg(test)]
+#[macro_use(quickcheck)]
+extern crate quickcheck_macros;
+
 use strum::IntoEnumIterator;
 
 use crate::bus::Bus32;

@@ -40,3 +40,17 @@ pub fn decoder_9x512(input: [bool; 9]) -> [bool; 512] {
 
     res
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quickcheck::{Arbitrary, Gen};
+
+    #[test]
+    fn dec_2x4() {
+        assert_eq!([true, false, false, false], decoder_2x4(false, false));
+        assert_eq!([false, true, false, false], decoder_2x4(true, false));
+        assert_eq!([false, false, true, false], decoder_2x4(false, true));
+        assert_eq!([false, false, false, true], decoder_2x4(true, true));
+    }
+}

@@ -199,4 +199,85 @@ mod tests {
         assert_eq!(false, n);
         assert_eq!(true, z);
     }
+
+    #[quickcheck]
+    fn quick_sum(a: i32, b: i32) {
+        let (res, n, z) = alu_32_i(a, b, AluControl::alu_sum());
+        let res = a + b;
+        assert_eq!(res, res);
+        assert_eq!(res < 0, n);
+        assert_eq!(res == 0, z);
+    }
+
+    #[quickcheck]
+    fn quick_dec(a: i32, b: i32) {
+        let (res, n, z) = alu_32_i(a, b, AluControl::alu_b_dec());
+        let res = b - 1;
+        assert_eq!(res, res);
+        assert_eq!(res < 0, n);
+        assert_eq!(res == 0, z);
+    }
+
+    #[quickcheck]
+    fn quick_inc(a: i32, b: i32) {
+        let (res, n, z) = alu_32_i(a, b, AluControl::alu_b_inc());
+        let res = b + 1;
+        assert_eq!(res, res);
+        assert_eq!(res < 0, n);
+        assert_eq!(res == 0, z);
+    }
+
+    #[quickcheck]
+    fn quick_sum_inc(a: i32, b: i32) {
+        let (res, n, z) = alu_32_i(a, b, AluControl::alu_sum_inc());
+        let res = a + b + 1;
+        assert_eq!(res, res);
+        assert_eq!(res < 0, n);
+        assert_eq!(res == 0, z);
+    }
+
+    #[quickcheck]
+    fn quick_sub(a: i32, b: i32) {
+        let (res, n, z) = alu_32_i(a, b, AluControl::alu_sub());
+        let res = b - a;
+        assert_eq!(res, res);
+        assert_eq!(res < 0, n);
+        assert_eq!(res == 0, z);
+    }
+
+    #[quickcheck]
+    fn quick_and(a: i32, b: i32) {
+        let (res, n, z) = alu_32_i(a, b, AluControl::alu_and());
+        let res = b & a;
+        assert_eq!(res, res);
+        assert_eq!(res < 0, n);
+        assert_eq!(res == 0, z);
+    }
+
+    #[quickcheck]
+    fn quick_or(a: i32, b: i32) {
+        let (res, n, z) = alu_32_i(a, b, AluControl::alu_or());
+        let res = b | a;
+        assert_eq!(res, res);
+        assert_eq!(res < 0, n);
+        assert_eq!(res == 0, z);
+    }
+
+    #[quickcheck]
+    fn quick_b(a: i32, b: i32) {
+        let (res, n, z) = alu_32_i(a, b, AluControl::alu_b());
+        let res = b;
+        assert_eq!(res, res);
+        assert_eq!(res < 0, n);
+        assert_eq!(res == 0, z);
+    }
+
+    #[quickcheck]
+    fn quick_a(a: i32, b: i32) {
+        let (res, n, z) = alu_32_i(a, b, AluControl::alu_a());
+        let res = a;
+        assert_eq!(res, res);
+        assert_eq!(res < 0, n);
+        assert_eq!(res == 0, z);
+    }
 }
