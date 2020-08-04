@@ -1,14 +1,18 @@
+use std::collections::VecDeque;
+
 use strum::IntoEnumIterator;
 
 use crate::alu::{alu_32, AluControl};
 use crate::bus::{Bus32, Bus9};
 use crate::decoders::decoder_4x9;
-use crate::main_memory::{fast_encode, MainMemory, ReadState, fast_decode};
+use crate::main_memory::{fast_decode, fast_encode, MainMemory, ReadState};
 use crate::main_memory::ReadState::{NoRead, ReadInitialized, ReadInProgress};
 use crate::memory::{Memory512x36, Register32, Register36, Register9};
 use crate::microasm::MicroAsm;
+use crate::microasm::MicroAsm::{wide2, nop1, wide_iload1};
 use crate::processor_elements::{BBusControls, CBusControls};
 use crate::shifter::{sll8, sra1};
+use crate::asm::IjvmCommand::NOP;
 
 impl Register36 {
     fn mir_jmpc(self) -> bool { self.get()[9] }
@@ -65,11 +69,9 @@ pub struct Mic1 {
     control_memory: Memory512x36,
 
     pub main_memory: MainMemory,
-    read_state: ReadState,
-    fetch_state: ReadState,
 
-    mar_to_read: i32,
-    pc_to_read: i32,
+    mar_reading: Vec<(i32, ReadState)>,
+    pc_reading: Vec<(i32, ReadState)>,
 }
 
 impl Mic1 {
@@ -89,10 +91,8 @@ impl Mic1 {
             h: Register32::new(),
             control_memory,
             main_memory,
-            read_state: ReadState::NoRead,
-            fetch_state: ReadState::NoRead,
-            mar_to_read: 0,
-            pc_to_read: 0
+            pc_reading: Vec::new(),
+            mar_reading: Vec::new(),
         }
     }
 
@@ -107,20 +107,27 @@ impl Mic1 {
 
     pub fn execute_command(&mut self) {
         Mic1::print_reg(&self.pc, "PC: ");
-        if self.read_state == ReadInProgress {
-            self.read_state = NoRead;
-            self.mdr.update_from_bus(&Bus32::from(self.main_memory.read(fast_decode(self.mar_to_read))), true);
-            Mic1::print_reg(&self.mdr, "MDR: ");
-        } else if self.read_state == ReadInitialized {
-            self.read_state = ReadInProgress;
+
+        for i in 0..self.mar_reading.len() {
+            if self.mar_reading[i].1 == ReadInProgress {
+                self.mar_reading[i].1 = NoRead;
+                self.mdr.update_from_bus(&Bus32::from(self.main_memory.read(fast_decode(self.mar_reading[i].0))), true);
+            } else if self.mar_reading[i].1 == ReadInitialized {
+                self.mar_reading[i].1 = ReadInProgress;
+            }
         }
 
-        if self.fetch_state == ReadInProgress {
-            self.fetch_state = NoRead;
-            self.mbr.update_from_bus(&Bus32::from(self.main_memory.read(fast_decode(self.pc_to_read))), true);
-        } else if self.fetch_state == ReadInitialized {
-            self.fetch_state = ReadInProgress;
+        for i in 0..self.pc_reading.len() {
+            if self.pc_reading[i].1 == ReadInProgress {
+                self.pc_reading[i].1 = NoRead;
+                self.mbr.update_from_bus(&Bus32::from(self.main_memory.read(fast_decode(self.pc_reading[i].0))), true);
+            } else if self.pc_reading[i].1 == ReadInitialized {
+                self.pc_reading[i].1 = ReadInProgress;
+            }
         }
+
+        self.pc_reading.retain(|x| x.1 != NoRead);
+        self.mar_reading.retain(|x| x.1 != NoRead);
 
         // Read new command
         let mpc_bus = Bus9::from(self.mpc.get());
@@ -152,13 +159,10 @@ impl Mic1 {
         // Initialize reads
         // XXX
         if self.mir.mir_read() {
-            self.read_state = ReadInitialized;
-            self.mar_to_read = fast_encode(&self.mar.get());
-            println!("MAR_TO_READ: {}", self.mar_to_read);
+            self.mar_reading.push((fast_encode(&self.mar.get()), ReadInitialized));
         }
         if self.mir.mir_fetch() {
-            self.fetch_state = ReadInitialized;
-            self.pc_to_read = fast_encode(&self.pc.get())
+            self.pc_reading.push((fast_encode(&self.pc.get()), ReadInitialized))
         }
 
         // Writing
@@ -167,12 +171,18 @@ impl Mic1 {
             self.main_memory.write_data(fast_encode(&self.mdr.read(true)), fast_encode(&self.mar.read(true)) as usize)
         }
 
+        print!("xxx {:?}", wide_iload1 as i32);
+        if self.get_current_command() == wide_iload1 {
+            print!("x")
+        }
+
         // O operation
         // Select next command
         let mut next_command = self.o();
         next_command[8] |= self.f(z_bit, n_bit);
         self.mpc.update(next_command, true);
 
+        println!("----------------");
         return;
     }
 
@@ -240,7 +250,9 @@ impl Mic1 {
                 return comm;
             }
         }
-        panic!("Command not found")
+        let mimimi = MicroAsm::wide_iload1.command();
+        println!("Cannot find command. Return NOP");
+        return nop1;
     }
 
     fn print_reg(reg: &Register32, str: &str) {

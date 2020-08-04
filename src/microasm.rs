@@ -314,7 +314,7 @@ impl Cb {
     }
 
     fn next_command_wide_jump(&mut self) -> [bool; 36] {
-        self.command[0] = true;
+        self.command[8] = true;
         return self.command;
     }
 
