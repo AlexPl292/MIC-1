@@ -34,6 +34,10 @@ pub fn decoder_9x512(input: [bool; 9]) -> [bool; 512] {
         }
     }
 
+    for i in 0..256 {
+        res[i] = res[i] && !input[8];
+    }
+
     for i in 256..512 {
         res[i] = res[i] && input[8];
     }
@@ -43,8 +47,9 @@ pub fn decoder_9x512(input: [bool; 9]) -> [bool; 512] {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use quickcheck::{Arbitrary, Gen};
+
+    use super::*;
 
     #[test]
     fn dec_2x4() {
@@ -52,5 +57,62 @@ mod tests {
         assert_eq!([false, true, false, false], decoder_2x4(true, false));
         assert_eq!([false, false, true, false], decoder_2x4(false, true));
         assert_eq!([false, false, false, true], decoder_2x4(true, true));
+    }
+
+    #[test]
+    fn dec_all_zero() {
+        let input = decoder_9x512([false; 9]);
+        assert_eq!(true, input[0]);
+        for x in 1..512 {
+            assert_eq!(false, input[x]);
+        }
+    }
+
+    #[test]
+    fn dec_last_true() {
+        let input = decoder_9x512([false, false, false, false, false, false, false, false, true]);
+        for x in 0..512 {
+            if x == 256 {
+                assert_eq!(true, input[x], "Index: {}", x);
+            } else {
+                assert_eq!(false, input[x], "Index: {}", x);
+            }
+        }
+    }
+
+    #[quickcheck]
+    fn dec_4_16(data: Vec<bool>) {
+        let mut res = [false; 4];
+        for x in 0..4 {
+            res[x] = *data.get(x).unwrap_or(&false);
+        }
+
+        let mut number = 0;
+        for x in 0..4 {
+            number += if res[x] { 2i32.pow(x as u32) } else { 0 };
+        }
+
+        let decoded = decoder_4x16(res[0], res[1], res[2], res[3]);
+        for x in 0..16 {
+            assert_eq!(number == x, decoded[x as usize], "Index: {}", x)
+        }
+    }
+
+    #[quickcheck]
+    fn dec_9_512(data: Vec<bool>) {
+        let mut res = [false; 9];
+        for x in 0..9 {
+            res[x] = *data.get(x).unwrap_or(&false);
+        }
+
+        let mut number = 0;
+        for x in 0..9 {
+            number += if res[x] { 2i32.pow(x as u32) } else { 0 };
+        }
+
+        let decoded = decoder_9x512(res);
+        for x in 0..512 {
+            assert_eq!(number == x, decoded[x as usize], "Index: {}", x)
+        }
     }
 }
