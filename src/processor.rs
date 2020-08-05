@@ -171,11 +171,6 @@ impl Mic1 {
             self.main_memory.write_data(fast_encode(&self.mdr.read(true)), fast_encode(&self.mar.read(true)) as usize)
         }
 
-        print!("xxx {:?}", wide_iload1 as i32);
-        if self.get_current_command() == wide_iload1 {
-            print!("x")
-        }
-
         // O operation
         // Select next command
         let mut next_command = self.o();
@@ -250,7 +245,6 @@ impl Mic1 {
                 return comm;
             }
         }
-        let mimimi = MicroAsm::wide_iload1.command();
         println!("Cannot find command. Return NOP");
         return nop1;
     }
