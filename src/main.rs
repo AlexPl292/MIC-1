@@ -297,6 +297,54 @@ mod tests {
         assert_stack(vec![1, 5, 3, 4], &mic1)
     }
 
+    #[test]
+    fn ldc_w() {
+        let commands = parse("LDC_W 0x00 0x00");
+        let constants = [1, 2, 3, 4, 0, 0, 0, 0, 0, 0];
+        let mut mic1 = create_processor(&commands, vec![1, 2], constants);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 2, 1], &mic1)
+    }
+
+    #[test]
+    fn ldc_w2() {
+        let commands = parse("LDC_W 0x00 0x02");
+        let constants = [1, 2, 3, 4, 0, 0, 0, 0, 0, 0];
+        let mut mic1 = create_processor(&commands, vec![1, 2], constants);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 2, 3], &mic1)
+    }
+
+    #[test]
+    fn ldc_w3() {
+        let commands = parse("LDC_W 0x00 0x05");
+        let constants = [1, 2, 3, 4, 5, 6, 0, 0, 0, 0];
+        let mut mic1 = create_processor(&commands, vec![1, 2], constants);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 2, 6], &mic1)
+    }
+
+    #[test]
+    fn iinc() {
+        let commands = parse("IINC 0x00 0x05");
+        let mut mic1 = create_processor(&commands, vec![1, 2], [0; 10]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![6, 2], &mic1)
+    }
+
+    #[test]
+    fn iinc2() {
+        let commands = parse("IINC 0x02 0x05");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4], [0; 10]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 2, 8, 4], &mic1)
+    }
+
     fn assert_stack(expected_stack: Vec<i32>, mic1: &Mic1) {
         let stack_ptr = fast_encode(&mic1.sp.get());
         assert_eq!(expected_stack.len() as i32, stack_ptr - STACK_START + 1);
