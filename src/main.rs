@@ -363,6 +363,60 @@ mod tests {
         assert_stack(vec![1, 2, 7], &mic1)
     }
 
+    #[test]
+    fn iflt() {
+        let commands = parse("IFLT 0x00 0x05\nIINC 0x00 0x01\nIADD");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4], [0; 10]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![2, 5], &mic1)
+    }
+
+    #[test]
+    fn iflt1() {
+        let commands = parse("IFLT 0x00 0x05\nIINC 0x00 0x01\nIADD");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, -4], [0; 10]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 5], &mic1)
+    }
+
+    #[test]
+    fn ifeq() {
+        let commands = parse("IFEQ 0x00 0x05\nIINC 0x00 0x01\nIADD");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4], [0; 10]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![2, 5], &mic1)
+    }
+
+    #[test]
+    fn ifeq1() {
+        let commands = parse("IFEQ 0x00 0x05\nIINC 0x00 0x01\nIADD");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 0], [0; 10]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 5], &mic1)
+    }
+
+    #[test]
+    fn if_icmpeq() {
+        let commands = parse("IF_ICMPEQ 0x00 0x05\nIINC 0x00 0x01\nIADD");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4, 5], [0; 10]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![2, 5], &mic1)
+    }
+
+    #[test]
+    fn if_icmpeq1() {
+        let commands = parse("IF_ICMPEQ 0x00 0x05\nIINC 0x00 0x01\nIADD");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4, 4], [0; 10]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 5], &mic1)
+    }
+
     fn assert_stack(expected_stack: Vec<i32>, mic1: &Mic1) {
         let stack_ptr = fast_encode(&mic1.sp.get());
         assert_eq!(expected_stack.len() as i32, stack_ptr - STACK_START + 1);
