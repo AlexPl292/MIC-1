@@ -18,16 +18,16 @@ pub struct Mic1 {
     mir: Register36,
     mpc: Register9,
 
-    mar: Register32,
-    mdr: Register32,
+    pub mar: Register32,
+    pub mdr: Register32,
     pub pc: Register32,
-    mbr: Register32,
+    pub mbr: Register32,
     pub sp: Register32,
     pub lv: Register32,
-    cpp: Register32,
+    pub cpp: Register32,
     pub tos: Register32,
-    opc: Register32,
-    h: Register32,
+    pub opc: Register32,
+    pub h: Register32,
 
     control_memory: Memory512x36,
 
