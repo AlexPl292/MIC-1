@@ -3,16 +3,16 @@ use std::collections::VecDeque;
 use strum::IntoEnumIterator;
 
 use crate::alu::{alu_32, AluControl};
+use crate::asm::IjvmCommand::NOP;
 use crate::bus::{Bus32, Bus9};
 use crate::decoders::decoder_4x9;
 use crate::main_memory::{fast_decode, fast_encode, MainMemory, ReadState};
 use crate::main_memory::ReadState::{NoRead, ReadInitialized, ReadInProgress};
 use crate::memory::{Memory512x36, Register32, Register36, Register9};
 use crate::microasm::MicroAsm;
-use crate::microasm::MicroAsm::{wide2, nop1, wide_iload1};
+use crate::microasm::MicroAsm::{invokevirtual14, invokevirtual15, nop1, wide2, wide_iload1};
 use crate::processor_elements::{BBusControls, CBusControls};
 use crate::shifter::{sll8, sra1};
-use crate::asm::IjvmCommand::NOP;
 
 impl Register36 {
     fn mir_jmpc(self) -> bool { self.get()[9] }
@@ -60,7 +60,7 @@ pub struct Mic1 {
     pub pc: Register32,
     mbr: Register32,
     pub sp: Register32,
-    lv: Register32,
+    pub lv: Register32,
     cpp: Register32,
     pub tos: Register32,
     opc: Register32,
@@ -102,6 +102,15 @@ impl Mic1 {
         while pc_counter < last_command {
             self.execute_command();
             pc_counter = fast_encode(&self.pc.get()) as usize;
+        }
+    }
+
+    pub fn run_n_times(&mut self, len_of_command: usize) {
+        let mut protect_counter = 0;
+        while protect_counter < len_of_command {
+            self.execute_command();
+            fast_encode(&self.pc.get()) as usize;
+            protect_counter += 1;
         }
     }
 

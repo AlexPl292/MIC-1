@@ -417,6 +417,73 @@ mod tests {
         assert_stack(vec![1, 5], &mic1)
     }
 
+    #[test]
+    fn invokevirtual() {
+        let program = r#"
+                BIPUSH 0x03
+                INVOKEVIRTUAL 0x00 0x02
+                IADD
+                0x00  0x01
+                0x00  0x00
+                BIPUSH 0x03
+"#;
+        let commands = parse(program);
+        let constants = [0xCA, 0x11, PROGRAM_START as i32 + 0x06, 4, 4, 5, 6, 0, 0, 0];
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4], constants);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 2, 3, 4, 15, 105, 10, 0x03], &mic1);
+
+        let lv = fast_encode(&mic1.lv.get());
+        assert_eq!(STACK_START + 4, lv);
+    }
+
+    #[test]
+    fn invokevirtual1() {
+        let program = r#"
+                BIPUSH 0x03
+                BIPUSH 0x05
+                BIPUSH 0x06
+                BIPUSH 0x06
+                INVOKEVIRTUAL 0x00 0x02
+                IADD
+                0x00  0x04
+                0x00  0x05
+                BIPUSH 0x03
+"#;
+        let commands = parse(program);
+        let constants = [0xCA, 0x11, PROGRAM_START as i32 + 0x0c, 4, 4, 5, 6, 0, 0, 0];
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4], constants);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 2, 3, 4, 23, 5, 6, 6, 0, 0, 0, 0, 0, 111, 10, 3], &mic1);
+
+        let lv = fast_encode(&mic1.lv.get());
+        assert_eq!(STACK_START + 4, lv);
+    }
+
+    #[test]
+    fn invokevirtual2() {
+        let program = r#"
+                BIPUSH 0x02
+                INVOKEVIRTUAL 0x00 0x02
+                IADD
+                0x00  0x01
+                0x00  0x00
+                BIPUSH 0x1c
+                IRETURN
+"#;
+        let commands = parse(program);
+        let constants = [0xCA, 0x11, PROGRAM_START as i32 + 0x06, 4, 4, 5, 6, 0, 0, 0];
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4], constants);
+        mic1.run_n_times(43);
+
+        assert_stack(vec![1, 2, 3, 4, 0x1c], &mic1);
+
+        let lv = fast_encode(&mic1.lv.get());
+        assert_eq!(STACK_START, lv);
+    }
+
     fn assert_stack(expected_stack: Vec<i32>, mic1: &Mic1) {
         let stack_ptr = fast_encode(&mic1.sp.get());
         assert_eq!(expected_stack.len() as i32, stack_ptr - STACK_START + 1);

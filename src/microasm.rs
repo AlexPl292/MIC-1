@@ -258,7 +258,7 @@ impl MicroAsm {
             F2 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(F3),
             F3 => Cb::new().finish(),
 
-            invokevirtual1 => Cb::new().r_pc().inc().w_pc().fetch().next_command(invokevirtual2),
+            invokevirtual1 => Cb::new().r_pc().alu_b_inc().w_pc().fetch().next_command(invokevirtual2),
             invokevirtual2 => Cb::new().r_mbru().alu_b().sll8().w_h().next_command(invokevirtual3),
             invokevirtual3 => Cb::new().r_mbru().alu_or().w_h().next_command(invokevirtual4),
             invokevirtual4 => Cb::new().r_cpp().alu_sum().w_mar().read().next_command(invokevirtual5),
