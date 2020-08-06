@@ -345,6 +345,24 @@ mod tests {
         assert_stack(vec![1, 2, 8, 4], &mic1)
     }
 
+    #[test]
+    fn goto() {
+        let commands = parse("GOTO 0x00 0x03\nIINC 0x00 0x01\nIADD");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4], [0; 10]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![2, 2, 7], &mic1)
+    }
+
+    #[test]
+    fn goto2() {
+        let commands = parse("GOTO 0x00 0x05\nIINC 0x00 0x01\nIADD");
+        let mut mic1 = create_processor(&commands, vec![1, 2, 3, 4], [0; 10]);
+        mic1.run(commands.len() + 1, PROGRAM_START);
+
+        assert_stack(vec![1, 2, 7], &mic1)
+    }
+
     fn assert_stack(expected_stack: Vec<i32>, mic1: &Mic1) {
         let stack_ptr = fast_encode(&mic1.sp.get());
         assert_eq!(expected_stack.len() as i32, stack_ptr - STACK_START + 1);
