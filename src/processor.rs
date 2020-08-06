@@ -14,43 +14,6 @@ use crate::microasm::MicroAsm::{invokevirtual14, invokevirtual15, nop1, wide2, w
 use crate::processor_elements::{BBusControls, CBusControls};
 use crate::shifter::{sll8, sra1};
 
-impl Register36 {
-    fn mir_jmpc(self) -> bool { self.get()[9] }
-    fn mir_jamn(self) -> bool { self.get()[10] }
-    fn mir_jamz(self) -> bool { self.get()[11] }
-
-    fn mir_addr(self) -> [bool; 9] {
-        let mut res = [false; 9];
-        res.copy_from_slice(&self.get()[..9]);
-        res
-    }
-
-    fn mir_b_bus_controls(self) -> [bool; 4] {
-        let mut res = [false; 4];
-        res.copy_from_slice(&self.get()[32..36]);
-        res
-    }
-
-    fn mir_write(self) -> bool { self.get()[29] }
-    fn mir_read(self) -> bool { self.get()[30] }
-    fn mir_fetch(self) -> bool { self.get()[31] }
-
-    fn mir_alu_controls(self) -> AluControl {
-        let mut code = [false; 6];
-        code.copy_from_slice(&self.get()[14..20]);
-        AluControl::from(code)
-    }
-
-    fn mir_c_bus_controls(self) -> CBusControls {
-        let mut code = [false; 9];
-        code.copy_from_slice(&self.get()[20..29]);
-        CBusControls::new(code)
-    }
-
-    fn mir_ssl8(self) -> bool { self.get()[12] }
-    fn mir_sra1(self) -> bool { self.get()[13] }
-}
-
 pub struct Mic1 {
     mir: Register36,
     mpc: Register9,
@@ -246,4 +209,41 @@ impl Mic1 {
         }
         return true;
     }
+}
+
+impl Register36 {
+    fn mir_jmpc(self) -> bool { self.get()[9] }
+    fn mir_jamn(self) -> bool { self.get()[10] }
+    fn mir_jamz(self) -> bool { self.get()[11] }
+
+    fn mir_addr(self) -> [bool; 9] {
+        let mut res = [false; 9];
+        res.copy_from_slice(&self.get()[..9]);
+        res
+    }
+
+    fn mir_b_bus_controls(self) -> [bool; 4] {
+        let mut res = [false; 4];
+        res.copy_from_slice(&self.get()[32..36]);
+        res
+    }
+
+    fn mir_write(self) -> bool { self.get()[29] }
+    fn mir_read(self) -> bool { self.get()[30] }
+    fn mir_fetch(self) -> bool { self.get()[31] }
+
+    fn mir_alu_controls(self) -> AluControl {
+        let mut code = [false; 6];
+        code.copy_from_slice(&self.get()[14..20]);
+        AluControl::from(code)
+    }
+
+    fn mir_c_bus_controls(self) -> CBusControls {
+        let mut code = [false; 9];
+        code.copy_from_slice(&self.get()[20..29]);
+        CBusControls::new(code)
+    }
+
+    fn mir_ssl8(self) -> bool { self.get()[12] }
+    fn mir_sra1(self) -> bool { self.get()[13] }
 }
