@@ -7,11 +7,13 @@ pub fn parse(program: &str) -> Vec<i32> {
     let program_lines = program_lines.filter(|x| !x.is_empty());
     for line in program_lines {
         let mut commands = line.split(" ").filter(|x| !x.is_empty());
-        let r = commands.next();
-        let main_command = r.unwrap();
-        res.push(IjvmCommand::parse(main_command) as i32);
+
         for command in commands {
-            res.push(i32::from_str_radix(command.trim_start_matches("0x"), 16).unwrap())
+            let command_or_address = match IjvmCommand::parse(command) {
+                Some(t) => t as i32,
+                None => i32::from_str_radix(command.trim_start_matches("0x"), 16).unwrap()
+            };
+            res.push(command_or_address);
         }
     }
 

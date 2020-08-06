@@ -27,29 +27,29 @@ pub enum IjvmCommand {
 }
 
 impl IjvmCommand {
-    pub fn parse(str: &str) -> IjvmCommand {
+    pub fn parse(str: &str) -> Option<IjvmCommand> {
         match str {
-            "BIPUSH" => BIPUSH,
-            "DUP" => DUP,
-            "GOTO" => GOTO,
-            "IADD" => IADD,
-            "IAND" => IAND,
-            "IFEQ" => IFEQ,
-            "IFLT" => IFLT,
-            "IF_ICMPEQ" => IF_ICMPEQ,
-            "IINC" => IINC,
-            "ILOAD" => ILOAD,
-            "INVOKEVIRTUAL" => INVOKEVIRTUAL,
-            "IOR" => IOR,
-            "IRETURN" => IRETURN,
-            "ISTORE" => ISTORE,
-            "ISUB" => ISUB,
-            "LDC_W" => LDC_W,
-            "NOP" => NOP,
-            "POP" => POP,
-            "SWAP" => SWAP,
-            "WIDE" => WIDE,
-            _ => panic!("Unexpected string")
+            "BIPUSH" => Option::Some(BIPUSH),
+            "DUP" => Option::Some(DUP),
+            "GOTO" => Option::Some(GOTO),
+            "IADD" => Option::Some(IADD),
+            "IAND" => Option::Some(IAND),
+            "IFEQ" => Option::Some(IFEQ),
+            "IFLT" => Option::Some(IFLT),
+            "IF_ICMPEQ" => Option::Some(IF_ICMPEQ),
+            "IINC" => Option::Some(IINC),
+            "ILOAD" => Option::Some(ILOAD),
+            "INVOKEVIRTUAL" => Option::Some(INVOKEVIRTUAL),
+            "IOR" => Option::Some(IOR),
+            "IRETURN" => Option::Some(IRETURN),
+            "ISTORE" => Option::Some(ISTORE),
+            "ISUB" => Option::Some(ISUB),
+            "LDC_W" => Option::Some(LDC_W),
+            "NOP" => Option::Some(NOP),
+            "POP" => Option::Some(POP),
+            "SWAP" => Option::Some(SWAP),
+            "WIDE" => Option::Some(WIDE),
+            _ => Option::None
         }
     }
 }
