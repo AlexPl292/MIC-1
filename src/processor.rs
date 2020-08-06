@@ -115,8 +115,6 @@ impl Mic1 {
     }
 
     pub fn execute_command(&mut self) {
-        Mic1::print_reg(&self.pc, "PC: ");
-
         for i in 0..self.mar_reading.len() {
             if self.mar_reading[i].1 == ReadInProgress {
                 self.mar_reading[i].1 = NoRead;
@@ -144,7 +142,6 @@ impl Mic1 {
 
         // Write new command to mir register
         self.mir.update_from_bus(&new_command, true);
-        self.print_current_command();
 
         // Create B bus
         let b_bus_controls = self.mir.mir_b_bus_controls();
@@ -186,7 +183,6 @@ impl Mic1 {
         next_command[8] |= self.f(z_bit, n_bit);
         self.mpc.update(next_command, true);
 
-        println!("----------------");
         return;
     }
 
@@ -240,28 +236,6 @@ impl Mic1 {
         self.pc.update_from_bus(bus, controls.pc());
         self.mdr.update_from_bus(bus, controls.mdr());
         self.mar.update_from_bus(bus, controls.mar());
-    }
-
-    fn print_current_command(&self) {
-        println!("Current command: {:?}", self.get_current_command())
-    }
-
-    fn get_current_command(&self) -> MicroAsm {
-        let current_mir = self.mir.read(true);
-
-        for comm in MicroAsm::iter() {
-            if Mic1::arrays_equals(&comm.command(), &current_mir) {
-                return comm;
-            }
-        }
-        println!("Cannot find command. Return NOP");
-        return nop1;
-    }
-
-    fn print_reg(reg: &Register32, str: &str) {
-        let pc_value = reg.read(true);
-        let encoded_value = fast_encode(&pc_value);
-        println!("{} {:?}", str, encoded_value)
     }
 
     fn arrays_equals(first: &[bool; 36], second: &[bool; 36]) -> bool {
