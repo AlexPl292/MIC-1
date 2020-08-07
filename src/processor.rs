@@ -135,10 +135,7 @@ impl Mic1 {
         }
 
         // Writing
-        // XXX
-        if self.mir.mir_write() {
-            self.main_memory.write_data(fast_encode(&self.mdr.read(true)), fast_encode(&self.mar.read(true)) as usize)
-        }
+        self.main_memory.write(self.mdr.get(), self.mar.get(), self.mir.mir_write());
 
         // O operation
         // Select next command

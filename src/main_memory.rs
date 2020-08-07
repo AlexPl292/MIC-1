@@ -9,6 +9,11 @@ impl MainMemory {
         self.cells[addr] = data
     }
 
+    pub fn write(&mut self, data: [bool; 32], addr: [bool; 32], enabled: bool) {
+        if !enabled { return }
+        self.cells[fast_encode(&addr) as usize] = fast_encode(&data)
+    }
+
     pub fn read(&self, addr: [bool; 32]) -> [bool; 32] {
         let i_addr = fast_encode(&addr);
         let data = self.cells[i_addr as usize];
