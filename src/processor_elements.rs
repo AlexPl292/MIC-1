@@ -1,5 +1,5 @@
-use crate::memory::Register36;
 use crate::alu::AluControl;
+use crate::memory::Register36;
 
 pub struct BBusControls {
     controls: [bool; 9]
