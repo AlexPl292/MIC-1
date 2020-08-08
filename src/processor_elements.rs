@@ -1,3 +1,6 @@
+use crate::memory::Register36;
+use crate::alu::AluControl;
+
 pub struct BBusControls {
     controls: [bool; 9]
 }
@@ -30,4 +33,41 @@ impl CBusControls {
     pub fn pc(&self) -> bool { self.controls[6] }
     pub fn mdr(&self) -> bool { self.controls[7] }
     pub fn mar(&self) -> bool { self.controls[8] }
+}
+
+impl Register36 {
+    pub fn mir_jmpc(self) -> bool { self.get()[9] }
+    pub fn mir_jamn(self) -> bool { self.get()[10] }
+    pub fn mir_jamz(self) -> bool { self.get()[11] }
+
+    pub fn mir_addr(self) -> [bool; 9] {
+        let mut res = [false; 9];
+        res.copy_from_slice(&self.get()[..9]);
+        res
+    }
+
+    pub fn mir_b_bus_controls(self) -> [bool; 4] {
+        let mut res = [false; 4];
+        res.copy_from_slice(&self.get()[32..36]);
+        res
+    }
+
+    pub fn mir_write(self) -> bool { self.get()[29] }
+    pub fn mir_read(self) -> bool { self.get()[30] }
+    pub fn mir_fetch(self) -> bool { self.get()[31] }
+
+    pub fn mir_alu_controls(self) -> AluControl {
+        let mut code = [false; 6];
+        code.copy_from_slice(&self.get()[14..20]);
+        AluControl::from(code)
+    }
+
+    pub fn mir_c_bus_controls(self) -> CBusControls {
+        let mut code = [false; 9];
+        code.copy_from_slice(&self.get()[20..29]);
+        CBusControls::new(code)
+    }
+
+    pub fn mir_ssl8(self) -> bool { self.get()[12] }
+    pub fn mir_sra1(self) -> bool { self.get()[13] }
 }

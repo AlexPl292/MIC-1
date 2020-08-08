@@ -73,8 +73,9 @@ impl Mic1 {
     }
 
     pub fn execute_command(&mut self) {
+        // Update registers from the main memory
         let (data, enabled) = self.main_memory.check_first_read();
-        self.mdr.update_from_bus(&Bus32::from(data ), enabled);
+        self.mdr.update_from_bus(&Bus32::from(data), enabled);
         let (data, enabled) = self.main_memory.check_second_read();
         self.mbr.update_from_bus(&Bus32::from(data), enabled);
 
@@ -180,41 +181,4 @@ impl Mic1 {
         }
         return true;
     }
-}
-
-impl Register36 {
-    fn mir_jmpc(self) -> bool { self.get()[9] }
-    fn mir_jamn(self) -> bool { self.get()[10] }
-    fn mir_jamz(self) -> bool { self.get()[11] }
-
-    fn mir_addr(self) -> [bool; 9] {
-        let mut res = [false; 9];
-        res.copy_from_slice(&self.get()[..9]);
-        res
-    }
-
-    fn mir_b_bus_controls(self) -> [bool; 4] {
-        let mut res = [false; 4];
-        res.copy_from_slice(&self.get()[32..36]);
-        res
-    }
-
-    fn mir_write(self) -> bool { self.get()[29] }
-    fn mir_read(self) -> bool { self.get()[30] }
-    fn mir_fetch(self) -> bool { self.get()[31] }
-
-    fn mir_alu_controls(self) -> AluControl {
-        let mut code = [false; 6];
-        code.copy_from_slice(&self.get()[14..20]);
-        AluControl::from(code)
-    }
-
-    fn mir_c_bus_controls(self) -> CBusControls {
-        let mut code = [false; 9];
-        code.copy_from_slice(&self.get()[20..29]);
-        CBusControls::new(code)
-    }
-
-    fn mir_ssl8(self) -> bool { self.get()[12] }
-    fn mir_sra1(self) -> bool { self.get()[13] }
 }
