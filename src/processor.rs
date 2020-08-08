@@ -32,9 +32,6 @@ pub struct Mic1 {
     control_memory: Memory512x36,
 
     pub main_memory: MainMemory,
-
-    mar_reading: Vec<(i32, ReadState)>,
-    pc_reading: Vec<(i32, ReadState)>,
 }
 
 impl Mic1 {
@@ -54,8 +51,6 @@ impl Mic1 {
             h: Register32::new(),
             control_memory,
             main_memory,
-            pc_reading: Vec::new(),
-            mar_reading: Vec::new(),
         }
     }
 
@@ -78,26 +73,10 @@ impl Mic1 {
     }
 
     pub fn execute_command(&mut self) {
-        for i in 0..self.mar_reading.len() {
-            if self.mar_reading[i].1 == ReadInProgress {
-                self.mar_reading[i].1 = NoRead;
-                self.mdr.update_from_bus(&Bus32::from(self.main_memory.read(fast_decode(self.mar_reading[i].0))), true);
-            } else if self.mar_reading[i].1 == ReadInitialized {
-                self.mar_reading[i].1 = ReadInProgress;
-            }
-        }
-
-        for i in 0..self.pc_reading.len() {
-            if self.pc_reading[i].1 == ReadInProgress {
-                self.pc_reading[i].1 = NoRead;
-                self.mbr.update_from_bus(&Bus32::from(self.main_memory.read(fast_decode(self.pc_reading[i].0))), true);
-            } else if self.pc_reading[i].1 == ReadInitialized {
-                self.pc_reading[i].1 = ReadInProgress;
-            }
-        }
-
-        self.pc_reading.retain(|x| x.1 != NoRead);
-        self.mar_reading.retain(|x| x.1 != NoRead);
+        let (data, enabled) = self.main_memory.check_first_read();
+        self.mdr.update_from_bus(&Bus32::from(data ), enabled);
+        let (data, enabled) = self.main_memory.check_second_read();
+        self.mbr.update_from_bus(&Bus32::from(data), enabled);
 
         // Read new command
         let mpc_bus = Bus9::from(self.mpc.get());
@@ -126,13 +105,8 @@ impl Mic1 {
         self.run_c_bus(&c_bus, c_bus_controls);
 
         // Initialize reads
-        // XXX
-        if self.mir.mir_read() {
-            self.mar_reading.push((fast_encode(&self.mar.get()), ReadInitialized));
-        }
-        if self.mir.mir_fetch() {
-            self.pc_reading.push((fast_encode(&self.pc.get()), ReadInitialized))
-        }
+        self.main_memory.request_first_read(self.mar.get(), self.mir.mir_read());
+        self.main_memory.request_second_read(self.pc.get(), self.mir.mir_fetch());
 
         // Writing
         self.main_memory.write(self.mdr.get(), self.mar.get(), self.mir.mir_write());

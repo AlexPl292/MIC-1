@@ -176,7 +176,7 @@ mod tests {
         mic1.run(commands.len() + 1, PROGRAM_START);
 
         let tos_res = fast_encode(&mic1.tos.read(true));
-        assert_eq!(1, tos_res)
+        assert_eq!(0x01, tos_res)
     }
 
     #[test]
