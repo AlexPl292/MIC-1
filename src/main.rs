@@ -27,6 +27,8 @@ mod decoders;
 mod alu;
 
 const PROGRAM: &str = r#"
+        LDC_W 0x00 0x00
+        LDC_W 0x00 0x01
         IADD
 "#;
 
@@ -38,7 +40,7 @@ const CONSTS: [i32; 10] = [1, 2, 0, 0, 0, 0, 0, 0, 0, 0];
 
 fn main() {
     let commands = parse(PROGRAM);
-    let mut mic1 = create_processor(&commands, vec![2, 3], CONSTS);
+    let mut mic1 = create_processor(&commands, vec![], CONSTS);
 
     mic1.run(commands.len() + 1, PROGRAM_START);
 
