@@ -5,6 +5,7 @@ extern crate quickcheck;
 extern crate quickcheck_macros;
 
 use strum::IntoEnumIterator;
+use tree_sitter::{Language, Parser};
 
 use crate::bus::Bus32;
 use crate::main_memory::{fast_decode, fast_encode, MainMemory};
@@ -25,6 +26,8 @@ mod bus;
 mod memory;
 mod decoders;
 mod alu;
+
+extern "C" { fn tree_sitter_jas() -> Language; }
 
 const PROGRAM: &str = r#"
         LDC_W 0x00 0x00
@@ -484,6 +487,18 @@ mod tests {
 
         let lv = fast_encode(&mic1.lv.get());
         assert_eq!(STACK_START, lv);
+    }
+
+    #[test]
+    fn test_parser() {
+        let language = unsafe { tree_sitter_jas() };
+        let mut parser = Parser::new();
+        parser.set_language(language).unwrap();
+
+        let source_code = ".main\n.end-main";
+        let tree = parser.parse(source_code, None).unwrap();
+
+        assert_eq!(tree.root_node().to_sexp(), "(source_file (main_program))");
     }
 
     fn assert_stack(expected_stack: Vec<i32>, mic1: &Mic1) {
