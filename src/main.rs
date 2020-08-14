@@ -15,6 +15,7 @@ use crate::microasm::MicroAsm::Main1;
 use crate::parser::parse;
 use crate::processor::Mic1;
 
+mod compiler;
 mod parser;
 mod shifter;
 mod asm;
