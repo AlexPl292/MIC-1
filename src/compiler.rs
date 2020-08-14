@@ -3,11 +3,15 @@ use std::str::FromStr;
 
 use tree_sitter::{Language, Parser};
 use linked_hash_map::LinkedHashMap;
+use crate::main;
+use std::process::Command;
+use crate::asm::IjvmCommand;
 
 extern "C" { fn tree_sitter_jas() -> Language; }
 
 pub struct ProcessorInfo {
-    constants: Vec<i32>
+    constants: Vec<i32>,
+    main_program: Vec<i32>
 }
 
 pub fn compile(source: &str) -> ProcessorInfo {
@@ -18,26 +22,44 @@ pub fn compile(source: &str) -> ProcessorInfo {
     let tree = parser.parse(source, None).unwrap();
     let pointer = tree.root_node();
 
-    let current = pointer.child(0).unwrap();
-
     let mut constants = LinkedHashMap::new();
-    if current.kind() == "constants" {
-        for i in 1..(current.child_count() - 1) {
-            let expression = current.child(i).unwrap();
-            let const_name = expression.child(0).unwrap().utf8_text(source.as_ref()).unwrap();
-            let const_value = expression.child(1).unwrap().utf8_text(source.as_ref()).unwrap();
-            constants.insert(const_name, i32::from_str(const_value).unwrap());
+    let mut main_program = Vec::new();
+    for i in 0..pointer.child_count() {
+        let current_node = pointer.child(i).unwrap();
+
+        if current_node.kind() == "constants" {
+            assert_eq!(0, i);
+            for i in 1..(current_node.child_count() - 1) {
+                let expression = current_node.child(i).unwrap();
+                let const_name = expression.child(0).unwrap().utf8_text(source.as_ref()).unwrap();
+                let const_value = expression.child(1).unwrap().utf8_text(source.as_ref()).unwrap();
+                constants.insert(const_name, i32::from_str(const_value).unwrap());
+            }
+        }
+
+        if current_node.kind() == "main_program" {
+            assert!(i == 0 || i == 1);
+            for x in 1..current_node.child_count() - 1 {
+                let command = current_node.child(x).unwrap();
+                main_program.push(match command.kind() {
+                    "command" => IjvmCommand::parse(command.utf8_text(source.as_ref()).unwrap()).unwrap() as i32,
+                    "dec_number" => i32::from_str(command.utf8_text(source.as_ref()).unwrap()).unwrap(),
+                    _ => panic!("Unexpected type")
+                })
+            }
         }
     }
 
     return ProcessorInfo {
-        constants: constants.values().cloned().collect()
+        constants: constants.values().cloned().collect(),
+        main_program
     };
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::asm::IjvmCommand::{IADD, DUP, BIPUSH};
 
     #[test]
     fn empty_constant() {
@@ -82,7 +104,38 @@ mod tests {
         assert_constants(vec![1, 1, 2], &info);
     }
 
+    #[test]
+    fn simple_program() {
+        let program = r#"
+                       .main
+                       DUP
+                       IADD
+                       .end-main
+"#;
+        let info = compile(program);
+
+        assert_constants(vec![], &info);
+        assert_main(vec![DUP as i32, IADD as i32], &info);
+    }
+
+    #[test]
+    fn program_with_constant() {
+        let program = r#"
+                       .main
+                       BIPUSH 1
+                       .end-main
+"#;
+        let info = compile(program);
+
+        assert_constants(vec![], &info);
+        assert_main(vec![BIPUSH as i32, 1], &info);
+    }
+
     fn assert_constants(expected: Vec<i32>, info: &ProcessorInfo) {
         assert_eq!(expected, info.constants);
+    }
+
+    fn assert_main(expected: Vec<i32>, info: &ProcessorInfo) {
+        assert_eq!(expected, info.main_program);
     }
 }
