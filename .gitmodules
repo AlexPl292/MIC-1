@@ -1,0 +1,3 @@
+[submodule "tree-sitter-jas"]
+	path = tree-sitter-jas
+	url = git@github.com:AlexPl292/tree-sitter-jas.git
