@@ -1,17 +1,18 @@
 use std::collections::HashMap;
+use std::process::Command;
 use std::str::FromStr;
 
-use tree_sitter::{Language, Parser};
 use linked_hash_map::LinkedHashMap;
-use crate::main;
-use std::process::Command;
+use tree_sitter::{Language, Parser};
+
 use crate::asm::IjvmCommand;
+use crate::main;
 
 extern "C" { fn tree_sitter_jas() -> Language; }
 
 pub struct ProcessorInfo {
     constants: Vec<i32>,
-    main_program: Vec<i32>
+    main_program: Vec<i32>,
 }
 
 pub fn compile(source: &str) -> ProcessorInfo {
@@ -44,6 +45,12 @@ pub fn compile(source: &str) -> ProcessorInfo {
                 main_program.push(match command.kind() {
                     "command" => IjvmCommand::parse(command.utf8_text(source.as_ref()).unwrap()).unwrap() as i32,
                     "dec_number" => i32::from_str(command.utf8_text(source.as_ref()).unwrap()).unwrap(),
+                    "oct_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0")).unwrap(), 8).unwrap(),
+                    "hex_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0x")).unwrap(), 16).unwrap(),
+                    "bin_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0b")).unwrap(), 2).unwrap(),
+                    "identifier" => {
+                        *constants.get(command.utf8_text(source.as_ref()).unwrap()).unwrap()
+                    },
                     _ => panic!("Unexpected type")
                 })
             }
@@ -52,14 +59,15 @@ pub fn compile(source: &str) -> ProcessorInfo {
 
     return ProcessorInfo {
         constants: constants.values().cloned().collect(),
-        main_program
+        main_program,
     };
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::asm::IjvmCommand::{BIPUSH, DUP, IADD};
+
     use super::*;
-    use crate::asm::IjvmCommand::{IADD, DUP, BIPUSH};
 
     #[test]
     fn empty_constant() {
@@ -129,6 +137,36 @@ mod tests {
 
         assert_constants(vec![], &info);
         assert_main(vec![BIPUSH as i32, 1], &info);
+    }
+
+    #[test]
+    fn program_with_hex_constant() {
+        let program = r#"
+                       .main
+                       BIPUSH 0x15
+                       .end-main
+"#;
+        let info = compile(program);
+
+        assert_constants(vec![], &info);
+        assert_main(vec![BIPUSH as i32, 0x15], &info);
+    }
+
+    #[test]
+    fn program_with_constants() {
+        let program = r#"
+                        .constant
+                        my_var 2
+                        .end-constant
+
+                        .main
+                        BIPUSH my_var
+                        .end-main
+"#;
+        let info = compile(program);
+
+        assert_constants(vec![2], &info);
+        assert_main(vec![BIPUSH as i32, 2], &info);
     }
 
     fn assert_constants(expected: Vec<i32>, info: &ProcessorInfo) {
