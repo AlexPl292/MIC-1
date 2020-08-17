@@ -30,8 +30,6 @@ pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
 
     let mut constants = LinkedHashMap::new();
     let mut main_program = Vec::new();
-    let mut label_positions = HashMap::new();
-    let mut labels = HashMap::new();
     for i in 0..pointer.child_count() {
         let current_node = pointer.child(i).unwrap();
 
@@ -47,41 +45,83 @@ pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
 
         if current_node.kind() == "main_program" {
             assert!(i == 0 || i == 1);
-            let mut variables = Vec::new();
-            for x in 1..current_node.child_count() - 1 {
-                let command = current_node.child(x).unwrap();
-                if command.kind() == "variables" {
-                    variables = process_variables(&command, source);
-                    continue
-                }
-                main_program.push(match command.kind() {
-                    "command" => IjvmCommand::parse(command.utf8_text(source.as_ref()).unwrap()).unwrap() as i32,
-                    "dec_number" => i32::from_str(command.utf8_text(source.as_ref()).unwrap()).unwrap(),
-                    "oct_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0")).unwrap(), 8).unwrap(),
-                    "hex_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0x")).unwrap(), 16).unwrap(),
-                    "bin_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0b")).unwrap(), 2).unwrap(),
-                    "identifier" => {
-                        let role = identifier_role(main_program.last().unwrap());
-                        match role {
-                            CONSTANT => *constants.get(command.utf8_text(source.as_ref()).unwrap()).unwrap(),
-                            LABEL => {
-                                label_positions.insert(main_program.len(), command.utf8_text(source.as_ref()).unwrap());
-                                PLACEHOLDER
-                            },
-                            VARIABLE => {
-                                let var_name = command.utf8_text(source.as_ref()).unwrap();
-                                variables.iter().position(|&x| x == var_name).unwrap() as i32
-                            }
-                        }
-                    }
-                    "label" => {
-                        labels.insert(command.child(0).unwrap().utf8_text(source.as_ref()).unwrap(), main_program.len());
-                        continue
-                    }
-                    _ => panic!("Unexpected type")
-                })
-            }
+            parse_method_body(source, &mut constants, &mut main_program, current_node, program_start_offset, 1)
         }
+
+        if current_node.kind() == "method" {
+            process_method(source, program_start_offset, &mut constants, &mut main_program, current_node)
+        }
+    }
+
+    return ProcessorInfo {
+        constants: constants.values().cloned().collect(),
+        main_program,
+    };
+}
+
+fn process_method(
+    source: &str,
+    program_start_offset: u32,
+    mut constants: &mut LinkedHashMap<&str, i32>,
+    mut main_program: &mut Vec<i32>,
+    current_node: Node
+) {
+    let name = current_node.child(1).unwrap().utf8_text(source.as_ref()).unwrap();
+
+    let parameters = current_node.child(2);
+
+    // TODO fix it
+    main_program.push(0x00);
+    main_program.push(0x00);
+    main_program.push(0x00);
+    main_program.push(0x00);
+
+    parse_method_body(source, &mut constants, &mut main_program, current_node, program_start_offset, 3)
+}
+
+fn parse_method_body(
+    source: &str,
+    constants: &mut LinkedHashMap<&str, i32>,
+    mut main_program: &mut Vec<i32>,
+    current_node: Node,
+    program_start_offset: u32,
+    inspect_from: usize
+) {
+    let mut variables = Vec::new();
+    let mut label_positions = HashMap::new();
+    let mut labels = HashMap::new();
+    for x in inspect_from..current_node.child_count() - 1 {
+        let command = current_node.child(x).unwrap();
+        if command.kind() == "variables" {
+            variables = process_variables(&command, source);
+            continue
+        }
+        main_program.push(match command.kind() {
+            "command" => IjvmCommand::parse(command.utf8_text(source.as_ref()).unwrap()).unwrap() as i32,
+            "dec_number" => i32::from_str(command.utf8_text(source.as_ref()).unwrap()).unwrap(),
+            "oct_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0")).unwrap(), 8).unwrap(),
+            "hex_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0x")).unwrap(), 16).unwrap(),
+            "bin_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0b")).unwrap(), 2).unwrap(),
+            "identifier" => {
+                let role = identifier_role(main_program.last().unwrap());
+                match role {
+                    CONSTANT => *constants.get(command.utf8_text(source.as_ref()).unwrap()).unwrap(),
+                    LABEL => {
+                        label_positions.insert(main_program.len(), command.utf8_text(source.as_ref()).unwrap());
+                        PLACEHOLDER
+                    },
+                    VARIABLE => {
+                        let var_name = command.utf8_text(source.as_ref()).unwrap();
+                        variables.iter().position(|&x| x == var_name).unwrap() as i32
+                    }
+                }
+            }
+            "label" => {
+                labels.insert(command.child(0).unwrap().utf8_text(source.as_ref()).unwrap(), main_program.len());
+                continue
+            }
+            _ => panic!("Unexpected type: {}", command.kind())
+        })
     }
 
     // Replace labels placeholders
@@ -89,11 +129,6 @@ pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
         let label_value = labels.get(value).unwrap();
         main_program[key] = *label_value as i32 + program_start_offset as i32;
     }
-
-    return ProcessorInfo {
-        constants: constants.values().cloned().collect(),
-        main_program,
-    };
 }
 
 fn process_variables<'a>(node: &Node, source: &'a str) -> Vec<&'a str> {
@@ -273,6 +308,21 @@ mod tests {
 
         assert_constants(vec![], &info);
         assert_main(vec![ILOAD as i32, 0x00], &info);
+    }
+
+    #[test]
+    fn program_with_method() {
+        let program = r#"
+                       .main
+                       .end-main
+                       .method my()
+                       DUP
+                       .end-method
+"#;
+        let info = compile(program, 10);
+
+        assert_constants(vec![], &info);
+        assert_main(vec![0x00, 0x00, 0x00, 0x00, DUP as i32], &info);
     }
 
     fn assert_constants(expected: Vec<i32>, info: &ProcessorInfo) {
