@@ -6,8 +6,8 @@ use linked_hash_map::LinkedHashMap;
 use tree_sitter::{Language, Parser, Node};
 
 use crate::asm::IjvmCommand;
-use crate::asm::IjvmCommand::{BIPUSH, GOTO, IFEQ, IFLT, IINC, ILOAD, ISTORE, LDC_W};
-use crate::compiler::IdentifierRole::{CONSTANT, LABEL, VARIABLE};
+use crate::asm::IjvmCommand::{BIPUSH, GOTO, IFEQ, IFLT, IINC, ILOAD, ISTORE, LDC_W, INVOKEVIRTUAL};
+use crate::compiler::IdentifierRole::{CONSTANT, LABEL, VARIABLE, METHOD};
 use crate::main;
 use std::env::var;
 
@@ -29,6 +29,8 @@ pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
     let pointer = tree.root_node();
 
     let mut constants = LinkedHashMap::new();
+    let mut methods = LinkedHashMap::new();
+    let mut method_placeholders = LinkedHashMap::new();
     let mut main_program = Vec::new();
     for i in 0..pointer.child_count() {
         let current_node = pointer.child(i).unwrap();
@@ -45,12 +47,25 @@ pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
 
         if current_node.kind() == "main_program" {
             assert!(i == 0 || i == 1);
-            parse_method_body(source, &mut constants, &mut main_program, current_node, program_start_offset, 1)
+            parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &mut main_program, current_node, program_start_offset, 1)
         }
 
         if current_node.kind() == "method" {
-            process_method(source, program_start_offset, &mut constants, &mut main_program, current_node)
+            process_method(source, program_start_offset, &mut constants, &mut methods, &mut method_placeholders, &mut main_program, current_node)
         }
+    }
+
+    // Add methods to constants
+    let mut method_constants = HashMap::new();
+    for (key, value) in methods {
+        method_constants.insert(key, constants.len());
+        constants.insert(key, value + program_start_offset as i32);
+    }
+
+    // Replace method placeholders
+    for (key, value) in method_placeholders {
+        let method_value = method_constants.get(value).unwrap();
+        main_program[key] = *method_value as i32;
     }
 
     return ProcessorInfo {
@@ -59,14 +74,17 @@ pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
     };
 }
 
-fn process_method(
-    source: &str,
+fn process_method<'a>(
+    source: &'a str,
     program_start_offset: u32,
     mut constants: &mut LinkedHashMap<&str, i32>,
+    mut methods: &mut LinkedHashMap<&'a str, i32>,
+    mut method_placeholders: &mut LinkedHashMap<usize, &'a str>,
     mut main_program: &mut Vec<i32>,
     current_node: Node
 ) {
     let name = current_node.child(1).unwrap().utf8_text(source.as_ref()).unwrap();
+    methods.insert(name, main_program.len() as i32);
 
     let parameters = current_node.child(2);
 
@@ -76,12 +94,14 @@ fn process_method(
     main_program.push(0x00);
     main_program.push(0x00);
 
-    parse_method_body(source, &mut constants, &mut main_program, current_node, program_start_offset, 3)
+    parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &mut main_program, current_node, program_start_offset, 3)
 }
 
-fn parse_method_body(
-    source: &str,
+fn parse_method_body<'a>(
+    source: &'a str,
     constants: &mut LinkedHashMap<&str, i32>,
+    methods: &mut LinkedHashMap<&str, i32>,
+    mut method_placeholders: &mut LinkedHashMap<usize, &'a str>,
     mut main_program: &mut Vec<i32>,
     current_node: Node,
     program_start_offset: u32,
@@ -114,6 +134,10 @@ fn parse_method_body(
                         let var_name = command.utf8_text(source.as_ref()).unwrap();
                         variables.iter().position(|&x| x == var_name).unwrap() as i32
                     }
+                    METHOD => {
+                        method_placeholders.insert(main_program.len(), command.utf8_text(source.as_ref()).unwrap());
+                        PLACEHOLDER
+                    }
                 }
             }
             "label" => {
@@ -143,6 +167,7 @@ fn identifier_role(previous_command: &i32) -> IdentifierRole {
     let label_expected = [GOTO as i32, IFEQ as i32, IFLT as i32];
     let var_expected = [IINC as i32, ILOAD as i32, ISTORE as i32];
     let const_expected = [LDC_W as i32, BIPUSH as i32];
+    let method_expected = [INVOKEVIRTUAL as i32];
 
     if label_expected.contains(&previous_command) {
         return LABEL;
@@ -150,6 +175,8 @@ fn identifier_role(previous_command: &i32) -> IdentifierRole {
         return VARIABLE;
     } else if const_expected.contains(&previous_command) {
         return CONSTANT;
+    } else if method_expected.contains(&previous_command) {
+        return METHOD;
     } else { panic!("Unexpected") }
 }
 
@@ -157,11 +184,12 @@ enum IdentifierRole {
     CONSTANT,
     LABEL,
     VARIABLE,
+    METHOD
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::asm::IjvmCommand::{BIPUSH, DUP, IADD};
+    use crate::asm::IjvmCommand::*;
 
     use super::*;
 
@@ -321,8 +349,24 @@ mod tests {
 "#;
         let info = compile(program, 10);
 
-        assert_constants(vec![], &info);
+        assert_constants(vec![10], &info);
         assert_main(vec![0x00, 0x00, 0x00, 0x00, DUP as i32], &info);
+    }
+
+    #[test]
+    fn program_with_method_and_invoking() {
+        let program = r#"
+                       .main
+                       INVOKEVIRTUAL my
+                       .end-main
+                       .method my()
+                       DUP
+                       .end-method
+"#;
+        let info = compile(program, 10);
+
+        assert_constants(vec![12], &info);
+        assert_main(vec![INVOKEVIRTUAL as i32, 0, 0x00, 0x00, 0x00, 0x00, DUP as i32], &info);
     }
 
     fn assert_constants(expected: Vec<i32>, info: &ProcessorInfo) {
