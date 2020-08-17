@@ -3,10 +3,13 @@ use std::process::Command;
 use std::str::FromStr;
 
 use linked_hash_map::LinkedHashMap;
-use tree_sitter::{Language, Parser};
+use tree_sitter::{Language, Parser, Node};
 
 use crate::asm::IjvmCommand;
+use crate::asm::IjvmCommand::{BIPUSH, GOTO, IFEQ, IFLT, IINC, ILOAD, ISTORE, LDC_W};
+use crate::compiler::IdentifierRole::{CONSTANT, LABEL, VARIABLE};
 use crate::main;
+use std::env::var;
 
 extern "C" { fn tree_sitter_jas() -> Language; }
 
@@ -15,7 +18,9 @@ pub struct ProcessorInfo {
     main_program: Vec<i32>,
 }
 
-pub fn compile(source: &str) -> ProcessorInfo {
+const PLACEHOLDER: i32 = 0x00;
+
+pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
     let language = unsafe { tree_sitter_jas() };
     let mut parser = Parser::new();
     parser.set_language(language).unwrap();
@@ -25,6 +30,8 @@ pub fn compile(source: &str) -> ProcessorInfo {
 
     let mut constants = LinkedHashMap::new();
     let mut main_program = Vec::new();
+    let mut label_positions = HashMap::new();
+    let mut labels = HashMap::new();
     for i in 0..pointer.child_count() {
         let current_node = pointer.child(i).unwrap();
 
@@ -40,8 +47,13 @@ pub fn compile(source: &str) -> ProcessorInfo {
 
         if current_node.kind() == "main_program" {
             assert!(i == 0 || i == 1);
+            let mut variables = Vec::new();
             for x in 1..current_node.child_count() - 1 {
                 let command = current_node.child(x).unwrap();
+                if command.kind() == "variables" {
+                    variables = process_variables(&command, source);
+                    continue
+                }
                 main_program.push(match command.kind() {
                     "command" => IjvmCommand::parse(command.utf8_text(source.as_ref()).unwrap()).unwrap() as i32,
                     "dec_number" => i32::from_str(command.utf8_text(source.as_ref()).unwrap()).unwrap(),
@@ -49,18 +61,67 @@ pub fn compile(source: &str) -> ProcessorInfo {
                     "hex_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0x")).unwrap(), 16).unwrap(),
                     "bin_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0b")).unwrap(), 2).unwrap(),
                     "identifier" => {
-                        *constants.get(command.utf8_text(source.as_ref()).unwrap()).unwrap()
-                    },
+                        let role = identifier_role(main_program.last().unwrap());
+                        match role {
+                            CONSTANT => *constants.get(command.utf8_text(source.as_ref()).unwrap()).unwrap(),
+                            LABEL => {
+                                label_positions.insert(main_program.len(), command.utf8_text(source.as_ref()).unwrap());
+                                PLACEHOLDER
+                            },
+                            VARIABLE => {
+                                let var_name = command.utf8_text(source.as_ref()).unwrap();
+                                variables.iter().position(|&x| x == var_name).unwrap() as i32
+                            }
+                        }
+                    }
+                    "label" => {
+                        labels.insert(command.child(0).unwrap().utf8_text(source.as_ref()).unwrap(), main_program.len());
+                        continue
+                    }
                     _ => panic!("Unexpected type")
                 })
             }
         }
     }
 
+    // Replace labels placeholders
+    for (key, value) in label_positions {
+        let label_value = labels.get(value).unwrap();
+        main_program[key] = *label_value as i32 + program_start_offset as i32;
+    }
+
     return ProcessorInfo {
         constants: constants.values().cloned().collect(),
         main_program,
     };
+}
+
+fn process_variables<'a>(node: &Node, source: &'a str) -> Vec<&'a str> {
+    let mut vars = Vec::new();
+    for x in 1..node.child_count() - 1 {
+        vars.push(node.child(x).unwrap().utf8_text(source.as_ref()).unwrap());
+    }
+    return vars
+}
+
+fn identifier_role(previous_command: &i32) -> IdentifierRole {
+    let label_expected = [GOTO as i32, IFEQ as i32, IFLT as i32];
+    let var_expected = [IINC as i32, ILOAD as i32, ISTORE as i32];
+    let const_expected = [LDC_W as i32, BIPUSH as i32];
+
+    if label_expected.contains(&previous_command) {
+        return LABEL;
+    } else if var_expected.contains(&previous_command) {
+        return VARIABLE;
+    } else if const_expected.contains(&previous_command) {
+        return CONSTANT;
+    } else { panic!("Unexpected") }
+}
+
+enum IdentifierRole {
+    CONSTANT,
+    LABEL,
+    VARIABLE,
 }
 
 #[cfg(test)]
@@ -77,7 +138,7 @@ mod tests {
                        .main
                        .end-main
 "#;
-        let info = compile(program);
+        let info = compile(program, 0);
 
         assert_constants(vec![], &info);
     }
@@ -91,7 +152,7 @@ mod tests {
                        .main
                        .end-main
 "#;
-        let info = compile(program);
+        let info = compile(program, 0);
 
         assert_constants(vec![1], &info);
     }
@@ -107,7 +168,7 @@ mod tests {
                        .main
                        .end-main
 "#;
-        let info = compile(program);
+        let info = compile(program, 0);
 
         assert_constants(vec![1, 1, 2], &info);
     }
@@ -120,7 +181,7 @@ mod tests {
                        IADD
                        .end-main
 "#;
-        let info = compile(program);
+        let info = compile(program, 0);
 
         assert_constants(vec![], &info);
         assert_main(vec![DUP as i32, IADD as i32], &info);
@@ -133,7 +194,7 @@ mod tests {
                        BIPUSH 1
                        .end-main
 "#;
-        let info = compile(program);
+        let info = compile(program, 0);
 
         assert_constants(vec![], &info);
         assert_main(vec![BIPUSH as i32, 1], &info);
@@ -146,7 +207,7 @@ mod tests {
                        BIPUSH 0x15
                        .end-main
 "#;
-        let info = compile(program);
+        let info = compile(program, 0);
 
         assert_constants(vec![], &info);
         assert_main(vec![BIPUSH as i32, 0x15], &info);
@@ -163,10 +224,55 @@ mod tests {
                         BIPUSH my_var
                         .end-main
 "#;
-        let info = compile(program);
+        let info = compile(program, 0);
 
         assert_constants(vec![2], &info);
         assert_main(vec![BIPUSH as i32, 2], &info);
+    }
+
+    #[test]
+    fn program_with_labels() {
+        let program = r#"
+                       .main
+                       label: DUP
+                       GOTO label
+                       .end-main
+"#;
+        let info = compile(program, 10);
+
+        assert_constants(vec![], &info);
+        assert_main(vec![DUP as i32, GOTO as i32, 10], &info);
+    }
+
+    #[test]
+    fn program_with_label_in_future() {
+        let program = r#"
+                       .main
+                       GOTO label
+                       label: DUP
+                       .end-main
+"#;
+        let info = compile(program, 10);
+
+        assert_constants(vec![], &info);
+        assert_main(vec![GOTO as i32, 12, DUP as i32], &info);
+    }
+
+    #[test]
+    fn program_with_variables() {
+        let program = r#"
+                       .main
+                       .var
+                       my_var_x
+                       my_var_y
+                       .end-var
+                       ILOAD my_var_x
+                       .end-main
+"#;
+        let info = compile(program, 10);
+
+        assert_constants(vec![], &info);
+        assert_main(vec![ILOAD as i32, 0x00], &info);
     }
 
     fn assert_constants(expected: Vec<i32>, info: &ProcessorInfo) {
