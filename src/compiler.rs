@@ -1,15 +1,15 @@
 use std::collections::HashMap;
+use std::env::var;
 use std::process::Command;
 use std::str::FromStr;
 
 use linked_hash_map::LinkedHashMap;
-use tree_sitter::{Language, Parser, Node};
+use tree_sitter::{Language, Node, Parser};
 
 use crate::asm::IjvmCommand;
-use crate::asm::IjvmCommand::{BIPUSH, GOTO, IFEQ, IFLT, IINC, ILOAD, ISTORE, LDC_W, INVOKEVIRTUAL};
-use crate::compiler::IdentifierRole::{CONSTANT, LABEL, VARIABLE, METHOD};
+use crate::asm::IjvmCommand::{BIPUSH, GOTO, IFEQ, IFLT, IINC, ILOAD, INVOKEVIRTUAL, ISTORE, LDC_W};
+use crate::compiler::IdentifierRole::{CONSTANT, LABEL, METHOD, VARIABLE};
 use crate::main;
-use std::env::var;
 
 extern "C" { fn tree_sitter_jas() -> Language; }
 
@@ -51,7 +51,7 @@ pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
         }
 
         if current_node.kind() == "method" {
-            process_method(source, program_start_offset, &mut constants, &mut methods, &mut method_placeholders, &mut main_program, current_node)
+            method_parsing::process_method(source, program_start_offset, &mut constants, &mut methods, &mut method_placeholders, &mut main_program, current_node)
         }
     }
 
@@ -74,27 +74,43 @@ pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
     };
 }
 
-fn process_method<'a>(
-    source: &'a str,
-    program_start_offset: u32,
-    mut constants: &mut LinkedHashMap<&str, i32>,
-    mut methods: &mut LinkedHashMap<&'a str, i32>,
-    mut method_placeholders: &mut LinkedHashMap<usize, &'a str>,
-    mut main_program: &mut Vec<i32>,
-    current_node: Node
-) {
-    let name = current_node.child(1).unwrap().utf8_text(source.as_ref()).unwrap();
-    methods.insert(name, main_program.len() as i32);
+mod method_parsing {
+    use linked_hash_map::LinkedHashMap;
+    use tree_sitter::Node;
 
-    let parameters = current_node.child(2);
+    use crate::compiler::parse_method_body;
 
-    // TODO fix it
-    main_program.push(0x00);
-    main_program.push(0x00);
-    main_program.push(0x00);
-    main_program.push(0x00);
+    pub fn process_method<'a>(
+        source: &'a str,
+        program_start_offset: u32,
+        mut constants: &mut LinkedHashMap<&str, i32>,
+        mut methods: &mut LinkedHashMap<&'a str, i32>,
+        mut method_placeholders: &mut LinkedHashMap<usize, &'a str>,
+        mut main_program: &mut Vec<i32>,
+        current_node: Node,
+    ) {
+        let name = current_node.child(1).unwrap().utf8_text(source.as_ref()).unwrap();
+        methods.insert(name, main_program.len() as i32);
 
-    parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &mut main_program, current_node, program_start_offset, 3)
+        let parameters = process_parameters(source, &current_node.child(2).unwrap());
+
+        // TODO fix it
+        main_program.push(((parameters.len() / 0x100) % 0x100) as i32);
+        main_program.push((parameters.len() % 0x100) as i32);
+        main_program.push(0x00);
+        main_program.push(0x00);
+
+        parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &mut main_program, current_node, program_start_offset, 3)
+    }
+
+    fn process_parameters<'a>(
+        source: &'a str,
+        current_node: &Node,
+    ) -> Vec<&'a str> {
+        (0..current_node.named_child_count())
+            .map(|x| current_node.named_child(x).unwrap().utf8_text(source.as_ref()).unwrap())
+            .collect()
+    }
 }
 
 fn parse_method_body<'a>(
@@ -351,6 +367,21 @@ mod tests {
 
         assert_constants(vec![10], &info);
         assert_main(vec![0x00, 0x00, 0x00, 0x00, DUP as i32], &info);
+    }
+
+    #[test]
+    fn program_with_method_and_parameters() {
+        let program = r#"
+                       .main
+                       .end-main
+                       .method my(first_var, second_var, third_var)
+                       DUP
+                       .end-method
+"#;
+        let info = compile(program, 10);
+
+        assert_constants(vec![10], &info);
+        assert_main(vec![0x00, 0x03, 0x00, 0x00, DUP as i32], &info);
     }
 
     #[test]
