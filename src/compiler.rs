@@ -10,6 +10,7 @@ use crate::asm::IjvmCommand;
 use crate::asm::IjvmCommand::{BIPUSH, GOTO, IFEQ, IFLT, IINC, ILOAD, INVOKEVIRTUAL, ISTORE, LDC_W};
 use crate::compiler::IdentifierRole::{CONSTANT, LABEL, METHOD, VARIABLE};
 use crate::main;
+use tree_sitter::LogType::Parse;
 
 extern "C" { fn tree_sitter_jas() -> Language; }
 
@@ -47,7 +48,13 @@ pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
 
         if current_node.kind() == "main_program" {
             assert!(i == 0 || i == 1);
-            parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &Vec::new(), &mut main_program, current_node, program_start_offset, 1)
+            let mut process_from = 1;
+            let mut vars = Vec::new();
+            if current_node.child(1).unwrap().kind() == "variables" {
+                vars = process_variables(&current_node.child(1).unwrap(), source);
+                process_from = 2;
+            }
+            parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &Vec::new(), &vars, &mut main_program, current_node, program_start_offset, process_from)
         }
 
         if current_node.kind() == "method" {
@@ -78,7 +85,7 @@ mod method_parsing {
     use linked_hash_map::LinkedHashMap;
     use tree_sitter::Node;
 
-    use crate::compiler::parse_method_body;
+    use crate::compiler::{parse_method_body, process_variables};
 
     pub fn process_method<'a>(
         source: &'a str,
@@ -94,13 +101,20 @@ mod method_parsing {
 
         let parameters = process_parameters(source, &current_node.child(2).unwrap());
 
+        let mut process_from = 3;
+        let mut vars = Vec::new();
+        if current_node.child(3).unwrap().kind() == "variables" {
+            vars = process_variables(&current_node.child(3).unwrap(), source);
+            process_from = 4;
+        }
+
         // TODO fix it
         main_program.push(((parameters.len() / 0x100) % 0x100) as i32);
         main_program.push((parameters.len() % 0x100) as i32);
         main_program.push(0x00);
         main_program.push(0x00);
 
-        parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &parameters, &mut main_program, current_node, program_start_offset, 3)
+        parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &parameters, &vars, &mut main_program, current_node, program_start_offset, process_from)
     }
 
     fn process_parameters<'a>(
@@ -119,20 +133,16 @@ fn parse_method_body<'a>(
     methods: &mut LinkedHashMap<&str, i32>,
     mut method_placeholders: &mut LinkedHashMap<usize, &'a str>,
     parameters: &Vec<&str>,
+    variables: &Vec<&str>,
     mut main_program: &mut Vec<i32>,
     current_node: Node,
     program_start_offset: u32,
     inspect_from: usize
 ) {
-    let mut variables = Vec::new();
     let mut label_positions = HashMap::new();
     let mut labels = HashMap::new();
     for x in inspect_from..current_node.child_count() - 1 {
         let command = current_node.child(x).unwrap();
-        if command.kind() == "variables" {
-            variables = process_variables(&command, source);
-            continue
-        }
         main_program.push(match command.kind() {
             "command" => IjvmCommand::parse(command.utf8_text(source.as_ref()).unwrap()).unwrap() as i32,
             "dec_number" => i32::from_str(command.utf8_text(source.as_ref()).unwrap()).unwrap(),
