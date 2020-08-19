@@ -453,6 +453,24 @@ mod tests {
         assert_main(vec![INVOKEVIRTUAL as i32, 0, 0x00, 0x00, 0x00, 0x00, DUP as i32], &info);
     }
 
+    #[test]
+    fn program_with_same_labels_in_main_and_method() {
+        let program = r#"
+                       .main
+                       label: DUP
+                       GOTO label
+                       .end-main
+                       .method my()
+                       label: DUP
+                       GOTO label
+                       .end-method
+"#;
+        let info = compile(program, 10);
+
+        assert_constants(vec![13], &info);
+        assert_main(vec![DUP as i32, GOTO as i32, 10, 0x00, 0x00, 0x00, 0x00, DUP as i32, GOTO as i32, 17], &info);
+    }
+
     fn assert_constants(expected: Vec<i32>, info: &ProcessorInfo) {
         assert_eq!(expected, info.constants);
     }
