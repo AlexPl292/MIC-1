@@ -108,11 +108,10 @@ mod method_parsing {
             process_from = 4;
         }
 
-        // TODO fix it
         main_program.push(((parameters.len() / 0x100) % 0x100) as i32);
         main_program.push((parameters.len() % 0x100) as i32);
-        main_program.push(0x00);
-        main_program.push(0x00);
+        main_program.push(((vars.len() / 0x100) % 0x100) as i32);
+        main_program.push((vars.len() % 0x100) as i32);
 
         parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &parameters, &vars, &mut main_program, current_node, program_start_offset, process_from)
     }
@@ -415,7 +414,7 @@ mod tests {
         let info = compile(program, 10);
 
         assert_constants(vec![10], &info);
-        assert_main(vec![0x00, 0x00, 0x00, 0x00, ILOAD as i32, 0x01], &info);
+        assert_main(vec![0x00, 0x00, 0x00, 0x02, ILOAD as i32, 0x01], &info);
     }
 
     #[test]
@@ -435,7 +434,7 @@ mod tests {
         let info = compile(program, 10);
 
         assert_constants(vec![10], &info);
-        assert_main(vec![0x00, 0x03, 0x00, 0x00, ILOAD as i32, 0x00, ILOAD as i32, 0x04], &info);
+        assert_main(vec![0x00, 0x03, 0x00, 0x02, ILOAD as i32, 0x00, ILOAD as i32, 0x04], &info);
     }
 
     #[test]
