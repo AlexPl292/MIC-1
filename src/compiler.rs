@@ -47,7 +47,7 @@ pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
 
         if current_node.kind() == "main_program" {
             assert!(i == 0 || i == 1);
-            parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &mut main_program, current_node, program_start_offset, 1)
+            parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &Vec::new(), &mut main_program, current_node, program_start_offset, 1)
         }
 
         if current_node.kind() == "method" {
@@ -100,7 +100,7 @@ mod method_parsing {
         main_program.push(0x00);
         main_program.push(0x00);
 
-        parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &mut main_program, current_node, program_start_offset, 3)
+        parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &parameters, &mut main_program, current_node, program_start_offset, 3)
     }
 
     fn process_parameters<'a>(
@@ -118,6 +118,7 @@ fn parse_method_body<'a>(
     constants: &mut LinkedHashMap<&str, i32>,
     methods: &mut LinkedHashMap<&str, i32>,
     mut method_placeholders: &mut LinkedHashMap<usize, &'a str>,
+    parameters: &Vec<&str>,
     mut main_program: &mut Vec<i32>,
     current_node: Node,
     program_start_offset: u32,
@@ -148,7 +149,11 @@ fn parse_method_body<'a>(
                     },
                     VARIABLE => {
                         let var_name = command.utf8_text(source.as_ref()).unwrap();
-                        variables.iter().position(|&x| x == var_name).unwrap() as i32
+                        let parameter_position = parameters.iter().position(|&x| x == var_name);
+                        match parameter_position {
+                            None => (variables.iter().position(|&x| x == var_name).unwrap() + parameters.len()) as i32,
+                            Some(t) => t as i32
+                        }
                     }
                     METHOD => {
                         method_placeholders.insert(main_program.len(), command.utf8_text(source.as_ref()).unwrap());
@@ -382,6 +387,45 @@ mod tests {
 
         assert_constants(vec![10], &info);
         assert_main(vec![0x00, 0x03, 0x00, 0x00, DUP as i32], &info);
+    }
+
+    #[test]
+    fn program_with_method_with_variables() {
+        let program = r#"
+                       .main
+                       .end-main
+                       .method my()
+                       .var
+                       first_var
+                       second_var
+                       .end-var
+                       ILOAD second_var
+                       .end-method
+"#;
+        let info = compile(program, 10);
+
+        assert_constants(vec![10], &info);
+        assert_main(vec![0x00, 0x00, 0x00, 0x00, ILOAD as i32, 0x01], &info);
+    }
+
+    #[test]
+    fn program_with_method_and_parameters_and_variable() {
+        let program = r#"
+                       .main
+                       .end-main
+                       .method my(first_par, second_par, third_par)
+                       .var
+                       first_var
+                       second_var
+                       .end-var
+                       ILOAD first_par
+                       ILOAD second_var
+                       .end-method
+"#;
+        let info = compile(program, 10);
+
+        assert_constants(vec![10], &info);
+        assert_main(vec![0x00, 0x03, 0x00, 0x00, ILOAD as i32, 0x00, ILOAD as i32, 0x04], &info);
     }
 
     #[test]
