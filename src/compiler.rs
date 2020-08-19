@@ -15,8 +15,8 @@ use crate::main;
 extern "C" { fn tree_sitter_jas() -> Language; }
 
 pub struct ProcessorInfo {
-    constants: Vec<i32>,
-    main_program: Vec<i32>,
+    pub constants: Vec<i32>,
+    pub main_program: Vec<i32>,
 }
 
 const PLACEHOLDER: i32 = 0x00;

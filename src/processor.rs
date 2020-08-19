@@ -10,7 +10,7 @@ use crate::main_memory::{fast_decode, fast_encode, MainMemory, ReadState};
 use crate::main_memory::ReadState::{NoRead, ReadInitialized, ReadInProgress};
 use crate::memory::{Memory512x36, Register32, Register36, Register9};
 use crate::microasm::MicroAsm;
-use crate::microasm::MicroAsm::{invokevirtual14, invokevirtual15, nop1, wide2, wide_iload1};
+use crate::microasm::MicroAsm::{invokevirtual14, invokevirtual15, nop1, wide2, wide_iload1, Main1};
 use crate::processor_elements::{BBusControls, CBusControls};
 use crate::shifter::{sll8, sra1};
 
@@ -63,6 +63,22 @@ impl Mic1 {
         }
     }
 
+    pub fn run_until_stop(&mut self, stop_instruction: i32) {
+        let mut pc_counter = 0;
+        let mut hit_stop = false;
+        while !(hit_stop && self.get_current_command() == Main1) {
+            self.execute_command();
+            pc_counter = fast_encode(&self.pc.get()) as usize;
+            hit_stop = hit_stop || self.main_memory.read_number(pc_counter) == stop_instruction;
+        }
+
+        // Finish last command
+        self.execute_command();
+        while self.get_current_command() != Main1 {
+            self.execute_command();
+        }
+    }
+
     pub fn run_n_times(&mut self, len_of_command: usize) {
         let mut protect_counter = 0;
         while protect_counter < len_of_command {
@@ -85,6 +101,7 @@ impl Mic1 {
 
         // Write new command to mir register
         self.mir.update_from_bus(&new_command, true);
+        self.print_current_command();
 
         // Create B bus
         let b_bus_controls = self.mir.mir_b_bus_controls();
@@ -159,6 +176,22 @@ impl Mic1 {
         bus.connect(mbru_value);
 
         bus
+    }
+
+    fn print_current_command(&self) {
+        println!("Current command: {:?}", self.get_current_command())
+    }
+
+    fn get_current_command(&self) -> MicroAsm {
+        let current_mir = self.mir.read(true);
+
+        for comm in MicroAsm::iter() {
+            if Mic1::arrays_equals(&comm.command(), &current_mir) {
+                return comm;
+            }
+        }
+        println!("Cannot find command. Return NOP");
+        return nop1;
     }
 
     fn run_c_bus(&mut self, bus: &Bus32, controls: CBusControls) {

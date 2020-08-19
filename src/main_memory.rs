@@ -25,6 +25,8 @@ impl MainMemory {
         fast_decode(data)
     }
 
+    pub fn read_number(&self, addr: usize) -> i32 { self.cells[addr] }
+
     pub fn request_first_read(&mut self, addr: [bool; 32], enabled: bool) {
         if !enabled { return; }
         self.first_reading.push((fast_encode(&addr), ReadInitialized));

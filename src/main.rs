@@ -14,6 +14,7 @@ use crate::microasm::MicroAsm;
 use crate::microasm::MicroAsm::Main1;
 use crate::parser::parse;
 use crate::processor::Mic1;
+use crate::compiler::ProcessorInfo;
 
 mod compiler;
 mod parser;
@@ -50,6 +51,17 @@ fn main() {
 
     let tos_res = fast_encode(&mic1.tos.read(true));
     print!("{:?}", tos_res)
+}
+
+fn create_processor_from_info(info: &ProcessorInfo) -> Mic1 {
+    let mut constants = [0; 10];
+    for x in 0..10 {
+        if x >= info.constants.len() {
+            break
+        }
+        constants[x] = *info.constants.get(x).unwrap();
+    }
+    create_processor(&info.main_program, Vec::new(), constants)
 }
 
 fn create_processor(commands: &Vec<i32>, initial_stack: Vec<i32>, constants: [i32; 10]) -> Mic1 {
@@ -114,6 +126,7 @@ fn make_control_memory() -> Memory512x36 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::compiler::compile;
 
     #[test]
     fn add() {
@@ -500,6 +513,22 @@ mod tests {
         let tree = parser.parse(source_code, None).unwrap();
 
         assert_eq!(tree.root_node().to_sexp(), "(source_file (main_program))");
+    }
+
+    #[test]
+    fn program_from_asm() {
+        let source = r#"
+           .main
+               BIPUSH 0x01
+               BIPUSH 0x02
+               IADD
+           .end-main
+        "#;
+        let compiled = compile(source, 10, Some(0xFF));
+        let mut mic1 = create_processor_from_info(&compiled);
+        mic1.run_until_stop(0xFF);
+
+        assert_stack(vec![3], &mic1);
     }
 
     fn assert_stack(expected_stack: Vec<i32>, mic1: &Mic1) {
