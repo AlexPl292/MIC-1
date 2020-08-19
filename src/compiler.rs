@@ -5,12 +5,12 @@ use std::str::FromStr;
 
 use linked_hash_map::LinkedHashMap;
 use tree_sitter::{Language, Node, Parser};
+use tree_sitter::LogType::Parse;
 
 use crate::asm::IjvmCommand;
 use crate::asm::IjvmCommand::{BIPUSH, GOTO, IFEQ, IFLT, IINC, ILOAD, INVOKEVIRTUAL, ISTORE, LDC_W};
 use crate::compiler::IdentifierRole::{CONSTANT, LABEL, METHOD, VARIABLE};
 use crate::main;
-use tree_sitter::LogType::Parse;
 
 extern "C" { fn tree_sitter_jas() -> Language; }
 
@@ -21,7 +21,7 @@ pub struct ProcessorInfo {
 
 const PLACEHOLDER: i32 = 0x00;
 
-pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
+pub fn compile(source: &str, program_start_offset: u32, stop_command: Option<i32>) -> ProcessorInfo {
     let language = unsafe { tree_sitter_jas() };
     let mut parser = Parser::new();
     parser.set_language(language).unwrap();
@@ -54,7 +54,12 @@ pub fn compile(source: &str, program_start_offset: u32) -> ProcessorInfo {
                 vars = process_variables(&current_node.child(1).unwrap(), source);
                 process_from = 2;
             }
-            parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &Vec::new(), &vars, &mut main_program, current_node, program_start_offset, process_from)
+            parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &Vec::new(), &vars, &mut main_program, current_node, program_start_offset, process_from);
+
+            match stop_command {
+                Some(t) => main_program.push(t),
+                None => {}
+            }
         }
 
         if current_node.kind() == "method" {
@@ -136,7 +141,7 @@ fn parse_method_body<'a>(
     mut main_program: &mut Vec<i32>,
     current_node: Node,
     program_start_offset: u32,
-    inspect_from: usize
+    inspect_from: usize,
 ) {
     let mut label_positions = HashMap::new();
     let mut labels = HashMap::new();
@@ -155,7 +160,7 @@ fn parse_method_body<'a>(
                     LABEL => {
                         label_positions.insert(main_program.len(), command.utf8_text(source.as_ref()).unwrap());
                         PLACEHOLDER
-                    },
+                    }
                     VARIABLE => {
                         let var_name = command.utf8_text(source.as_ref()).unwrap();
                         let parameter_position = parameters.iter().position(|&x| x == var_name);
@@ -172,7 +177,7 @@ fn parse_method_body<'a>(
             }
             "label" => {
                 labels.insert(command.child(0).unwrap().utf8_text(source.as_ref()).unwrap(), main_program.len());
-                continue
+                continue;
             }
             _ => panic!("Unexpected type: {}", command.kind())
         })
@@ -190,7 +195,7 @@ fn process_variables<'a>(node: &Node, source: &'a str) -> Vec<&'a str> {
     for x in 1..node.child_count() - 1 {
         vars.push(node.child(x).unwrap().utf8_text(source.as_ref()).unwrap());
     }
-    return vars
+    return vars;
 }
 
 fn identifier_role(previous_command: &i32) -> IdentifierRole {
@@ -214,7 +219,7 @@ enum IdentifierRole {
     CONSTANT,
     LABEL,
     VARIABLE,
-    METHOD
+    METHOD,
 }
 
 #[cfg(test)]
@@ -231,7 +236,7 @@ mod tests {
                        .main
                        .end-main
 "#;
-        let info = compile(program, 0);
+        let info = compile(program, 0, None);
 
         assert_constants(vec![], &info);
     }
@@ -245,7 +250,7 @@ mod tests {
                        .main
                        .end-main
 "#;
-        let info = compile(program, 0);
+        let info = compile(program, 0, None);
 
         assert_constants(vec![1], &info);
     }
@@ -261,7 +266,7 @@ mod tests {
                        .main
                        .end-main
 "#;
-        let info = compile(program, 0);
+        let info = compile(program, 0, None);
 
         assert_constants(vec![1, 1, 2], &info);
     }
@@ -274,7 +279,7 @@ mod tests {
                        IADD
                        .end-main
 "#;
-        let info = compile(program, 0);
+        let info = compile(program, 0, None);
 
         assert_constants(vec![], &info);
         assert_main(vec![DUP as i32, IADD as i32], &info);
@@ -287,7 +292,7 @@ mod tests {
                        BIPUSH 1
                        .end-main
 "#;
-        let info = compile(program, 0);
+        let info = compile(program, 0, None);
 
         assert_constants(vec![], &info);
         assert_main(vec![BIPUSH as i32, 1], &info);
@@ -300,7 +305,7 @@ mod tests {
                        BIPUSH 0x15
                        .end-main
 "#;
-        let info = compile(program, 0);
+        let info = compile(program, 0, None);
 
         assert_constants(vec![], &info);
         assert_main(vec![BIPUSH as i32, 0x15], &info);
@@ -317,7 +322,7 @@ mod tests {
                         BIPUSH my_var
                         .end-main
 "#;
-        let info = compile(program, 0);
+        let info = compile(program, 0, None);
 
         assert_constants(vec![2], &info);
         assert_main(vec![BIPUSH as i32, 2], &info);
@@ -331,7 +336,7 @@ mod tests {
                        GOTO label
                        .end-main
 "#;
-        let info = compile(program, 10);
+        let info = compile(program, 10, None);
 
         assert_constants(vec![], &info);
         assert_main(vec![DUP as i32, GOTO as i32, 10], &info);
@@ -345,7 +350,7 @@ mod tests {
                        label: DUP
                        .end-main
 "#;
-        let info = compile(program, 10);
+        let info = compile(program, 10, None);
 
         assert_constants(vec![], &info);
         assert_main(vec![GOTO as i32, 12, DUP as i32], &info);
@@ -362,7 +367,7 @@ mod tests {
                        ILOAD my_var_x
                        .end-main
 "#;
-        let info = compile(program, 10);
+        let info = compile(program, 10, None);
 
         assert_constants(vec![], &info);
         assert_main(vec![ILOAD as i32, 0x00], &info);
@@ -377,7 +382,7 @@ mod tests {
                        DUP
                        .end-method
 "#;
-        let info = compile(program, 10);
+        let info = compile(program, 10, None);
 
         assert_constants(vec![10], &info);
         assert_main(vec![0x00, 0x00, 0x00, 0x00, DUP as i32], &info);
@@ -392,7 +397,7 @@ mod tests {
                        DUP
                        .end-method
 "#;
-        let info = compile(program, 10);
+        let info = compile(program, 10, None);
 
         assert_constants(vec![10], &info);
         assert_main(vec![0x00, 0x03, 0x00, 0x00, DUP as i32], &info);
@@ -411,7 +416,7 @@ mod tests {
                        ILOAD second_var
                        .end-method
 "#;
-        let info = compile(program, 10);
+        let info = compile(program, 10, None);
 
         assert_constants(vec![10], &info);
         assert_main(vec![0x00, 0x00, 0x00, 0x02, ILOAD as i32, 0x01], &info);
@@ -431,7 +436,7 @@ mod tests {
                        ILOAD second_var
                        .end-method
 "#;
-        let info = compile(program, 10);
+        let info = compile(program, 10, None);
 
         assert_constants(vec![10], &info);
         assert_main(vec![0x00, 0x03, 0x00, 0x02, ILOAD as i32, 0x00, ILOAD as i32, 0x04], &info);
@@ -447,7 +452,7 @@ mod tests {
                        DUP
                        .end-method
 "#;
-        let info = compile(program, 10);
+        let info = compile(program, 10, None);
 
         assert_constants(vec![12], &info);
         assert_main(vec![INVOKEVIRTUAL as i32, 0, 0x00, 0x00, 0x00, 0x00, DUP as i32], &info);
@@ -465,10 +470,24 @@ mod tests {
                        GOTO label
                        .end-method
 "#;
-        let info = compile(program, 10);
+        let info = compile(program, 10, None);
 
         assert_constants(vec![13], &info);
         assert_main(vec![DUP as i32, GOTO as i32, 10, 0x00, 0x00, 0x00, 0x00, DUP as i32, GOTO as i32, 17], &info);
+    }
+
+    #[test]
+    fn program_with_stop_instruction() {
+        let program = r#"
+                       .main
+                       DUP
+                       POP
+                       .end-main
+"#;
+        let info = compile(program, 10, Some(0xFF));
+
+        assert_constants(vec![], &info);
+        assert_main(vec![DUP as i32, POP as i32, 0xFF], &info);
     }
 
     fn assert_constants(expected: Vec<i32>, info: &ProcessorInfo) {
