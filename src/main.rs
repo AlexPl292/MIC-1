@@ -524,24 +524,63 @@ mod tests {
                IADD
            .end-main
         "#;
-        let compiled = compile(source, 10, Some(0xFF));
+        let compiled = compile(source, PROGRAM_START as u32, Some(0xFF));
         let mut mic1 = create_processor_from_info(&compiled);
         mic1.run_until_stop(0xFF);
 
         assert_stack(vec![3], &mic1);
     }
 
+    #[test]
+    fn program_from_asm_with_function() {
+        let source = r#"
+           .main
+               BIPUSH 0x01
+               BIPUSH 0x01
+               BIPUSH 0x02
+               INVOKEVIRTUAL sum
+           .end-main
+           .method sum(first, second)
+               ILOAD first
+               ILOAD second
+               IADD
+               IRETURN
+           .end-method
+        "#;
+        let compiled = compile(source, PROGRAM_START as u32, Some(0xFF));
+        let mut mic1 = create_processor_from_info(&compiled);
+        mic1.run_until_stop(0xFF);
+
+        assert_stack(vec![3], &mic1);
+    }
+
+    #[test]
+    fn program_from_asm_with_function_and_variable_loading() {
+        let source = r#"
+           .main
+               BIPUSH 0x02
+               BIPUSH 0x03
+               INVOKEVIRTUAL sum
+           .end-main
+           .method sum(first)
+               ILOAD first
+           .end-method
+        "#;
+        let compiled = compile(source, PROGRAM_START as u32, None);
+        let mut mic1 = create_processor_from_info(&compiled);
+        mic1.run_n_times(40);
+
+        assert_stack(vec![12, 3, 107, 10, 3], &mic1);
+    }
+
     fn assert_stack(expected_stack: Vec<i32>, mic1: &Mic1) {
         let stack_ptr = fast_encode(&mic1.sp.get());
-        assert_eq!(expected_stack.len() as i32, stack_ptr - STACK_START + 1);
-
-        let tos_res = fast_encode(&mic1.tos.read(true));
-        assert_eq!(expected_stack.last().unwrap(), &tos_res);
-
-        for x in 0..expected_stack.len() {
-            assert_eq!(expected_stack.get(x).unwrap(),
-                       &fast_encode(&mic1.main_memory.read(fast_decode((x + STACK_START as usize) as i32))),
-                       " At index {}", x)
+        let stack_size = stack_ptr - STACK_START + 1;
+        let mut real_stack = Vec::new();
+        for x in 0..stack_size {
+            real_stack.push(fast_encode(&mic1.main_memory.read(fast_decode(x + STACK_START))));
         }
+
+        assert_eq!(expected_stack, real_stack);
     }
 }

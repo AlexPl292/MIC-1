@@ -13,6 +13,7 @@ use crate::microasm::MicroAsm;
 use crate::microasm::MicroAsm::{invokevirtual14, invokevirtual15, nop1, wide2, wide_iload1, Main1};
 use crate::processor_elements::{BBusControls, CBusControls};
 use crate::shifter::{sll8, sra1};
+use crate::STACK_START;
 
 pub struct Mic1 {
     mir: Register36,
@@ -89,6 +90,15 @@ impl Mic1 {
     }
 
     pub fn execute_command(&mut self) {
+        // Debugging info
+        self.print_stack();
+        Mic1::print_reg(&self.pc, "PC: ");
+        Mic1::print_reg(&self.lv, "LV: ");
+        Mic1::print_reg(&self.tos, "TOS: ");
+        Mic1::print_reg(&self.sp, "SP: ");
+        Mic1::print_reg(&self.h, "H: ");
+        Mic1::print_reg(&self.mar, "MAR: ");
+
         // Update registers from the main memory
         let (data, enabled) = self.main_memory.check_first_read();
         self.mdr.update_from_bus(&Bus32::from(data), enabled);
@@ -213,5 +223,22 @@ impl Mic1 {
             }
         }
         return true;
+    }
+
+    fn print_reg(reg: &Register32, str: &str) {
+        let pc_value = reg.read(true);
+        let encoded_value = fast_encode(&pc_value);
+        println!("{} {:?}", str, encoded_value)
+    }
+
+    fn print_stack(&self) {
+        let stack_ptr = fast_encode(&self.sp.get());
+        let stack_size = stack_ptr - STACK_START + 1;
+        let mut real_stack = Vec::new();
+        for x in 0..stack_size {
+            real_stack.push(fast_encode(&self.main_memory.read(fast_decode(x + STACK_START))));
+        }
+
+        println!("{:?}", real_stack);
     }
 }

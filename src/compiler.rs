@@ -29,6 +29,8 @@ pub fn compile(source: &str, program_start_offset: u32, stop_command: Option<i32
     let tree = parser.parse(source, None).unwrap();
     let pointer = tree.root_node();
 
+    println!("{}", tree.root_node().to_sexp());
+
     let mut constants = LinkedHashMap::new();
     let mut methods = LinkedHashMap::new();
     let mut method_placeholders = LinkedHashMap::new();
@@ -54,7 +56,7 @@ pub fn compile(source: &str, program_start_offset: u32, stop_command: Option<i32
                 vars = process_variables(&current_node.child(1).unwrap(), source);
                 process_from = 2;
             }
-            parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &Vec::new(), &vars, &mut main_program, current_node, program_start_offset, process_from);
+            parse_method_body(source, &mut constants, &mut method_placeholders, &Vec::new(), &vars, &mut main_program, current_node, program_start_offset, process_from);
 
             match stop_command {
                 Some(t) => main_program.push(t),
@@ -77,7 +79,8 @@ pub fn compile(source: &str, program_start_offset: u32, stop_command: Option<i32
     // Replace method placeholders
     for (key, value) in method_placeholders {
         let method_value = method_constants.get(value).unwrap();
-        main_program[key] = *method_value as i32;
+        main_program[key] = ((*method_value as i32) / 0x100) % 0x100;
+        main_program[key + 1] = (*method_value as i32) % 0x100;
     }
 
     return ProcessorInfo {
@@ -113,12 +116,15 @@ mod method_parsing {
             process_from = 4;
         }
 
-        main_program.push(((parameters.len() / 0x100) % 0x100) as i32);
-        main_program.push((parameters.len() % 0x100) as i32);
+        // One more parameter for OBJREF
+        let amount_of_parameters = parameters.len() + 1;
+
+        main_program.push(((amount_of_parameters / 0x100) % 0x100) as i32);
+        main_program.push((amount_of_parameters % 0x100) as i32);
         main_program.push(((vars.len() / 0x100) % 0x100) as i32);
         main_program.push((vars.len() % 0x100) as i32);
 
-        parse_method_body(source, &mut constants, &mut methods, &mut method_placeholders, &parameters, &vars, &mut main_program, current_node, program_start_offset, process_from)
+        parse_method_body(source, &mut constants, &mut method_placeholders, &parameters, &vars, &mut main_program, current_node, program_start_offset, process_from)
     }
 
     fn process_parameters<'a>(
@@ -134,7 +140,6 @@ mod method_parsing {
 fn parse_method_body<'a>(
     source: &'a str,
     constants: &mut LinkedHashMap<&str, i32>,
-    methods: &mut LinkedHashMap<&str, i32>,
     mut method_placeholders: &mut LinkedHashMap<usize, &'a str>,
     parameters: &Vec<&str>,
     variables: &Vec<&str>,
@@ -147,40 +152,40 @@ fn parse_method_body<'a>(
     let mut labels = HashMap::new();
     for x in inspect_from..current_node.child_count() - 1 {
         let command = current_node.child(x).unwrap();
-        main_program.push(match command.kind() {
-            "command" => IjvmCommand::parse(command.utf8_text(source.as_ref()).unwrap()).unwrap() as i32,
-            "dec_number" => i32::from_str(command.utf8_text(source.as_ref()).unwrap()).unwrap(),
-            "oct_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0")).unwrap(), 8).unwrap(),
-            "hex_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0x")).unwrap(), 16).unwrap(),
-            "bin_number" => i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0b")).unwrap(), 2).unwrap(),
+        match command.kind() {
+            "command" => main_program.push(IjvmCommand::parse(command.utf8_text(source.as_ref()).unwrap()).unwrap() as i32),
+            "dec_number" => main_program.push(i32::from_str(command.utf8_text(source.as_ref()).unwrap()).unwrap()),
+            "oct_number" => main_program.push(i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0")).unwrap(), 8).unwrap()),
+            "hex_number" => main_program.push(i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0x")).unwrap(), 16).unwrap()),
+            "bin_number" => main_program.push(i32::from_str_radix(command.utf8_text(source.as_ref()).map(|x| x.trim_start_matches("0b")).unwrap(), 2).unwrap()),
             "identifier" => {
                 let role = identifier_role(main_program.last().unwrap());
                 match role {
-                    CONSTANT => *constants.get(command.utf8_text(source.as_ref()).unwrap()).unwrap(),
+                    CONSTANT => main_program.push(*constants.get(command.utf8_text(source.as_ref()).unwrap()).unwrap()),
                     LABEL => {
                         label_positions.insert(main_program.len(), command.utf8_text(source.as_ref()).unwrap());
-                        PLACEHOLDER
+                        main_program.push(PLACEHOLDER)
                     }
                     VARIABLE => {
                         let var_name = command.utf8_text(source.as_ref()).unwrap();
                         let parameter_position = parameters.iter().position(|&x| x == var_name);
-                        match parameter_position {
+                        main_program.push(match parameter_position {
                             None => (variables.iter().position(|&x| x == var_name).unwrap() + parameters.len()) as i32,
                             Some(t) => t as i32
-                        }
+                        } + 1)
                     }
                     METHOD => {
                         method_placeholders.insert(main_program.len(), command.utf8_text(source.as_ref()).unwrap());
-                        PLACEHOLDER
+                        main_program.push(PLACEHOLDER);
+                        main_program.push(PLACEHOLDER);
                     }
                 }
             }
             "label" => {
                 labels.insert(command.child(0).unwrap().utf8_text(source.as_ref()).unwrap(), main_program.len());
-                continue;
             }
             _ => panic!("Unexpected type: {}", command.kind())
-        })
+        }
     }
 
     // Replace labels placeholders
@@ -370,7 +375,7 @@ mod tests {
         let info = compile(program, 10, None);
 
         assert_constants(vec![], &info);
-        assert_main(vec![ILOAD as i32, 0x00], &info);
+        assert_main(vec![ILOAD as i32, 0x01], &info);
     }
 
     #[test]
@@ -385,7 +390,7 @@ mod tests {
         let info = compile(program, 10, None);
 
         assert_constants(vec![10], &info);
-        assert_main(vec![0x00, 0x00, 0x00, 0x00, DUP as i32], &info);
+        assert_main(vec![0x00, 0x01, 0x00, 0x00, DUP as i32], &info);
     }
 
     #[test]
@@ -400,7 +405,7 @@ mod tests {
         let info = compile(program, 10, None);
 
         assert_constants(vec![10], &info);
-        assert_main(vec![0x00, 0x03, 0x00, 0x00, DUP as i32], &info);
+        assert_main(vec![0x00, 0x04, 0x00, 0x00, DUP as i32], &info);
     }
 
     #[test]
@@ -419,7 +424,7 @@ mod tests {
         let info = compile(program, 10, None);
 
         assert_constants(vec![10], &info);
-        assert_main(vec![0x00, 0x00, 0x00, 0x02, ILOAD as i32, 0x01], &info);
+        assert_main(vec![0x00, 0x01, 0x00, 0x02, ILOAD as i32, 0x02], &info);
     }
 
     #[test]
@@ -439,7 +444,7 @@ mod tests {
         let info = compile(program, 10, None);
 
         assert_constants(vec![10], &info);
-        assert_main(vec![0x00, 0x03, 0x00, 0x02, ILOAD as i32, 0x00, ILOAD as i32, 0x04], &info);
+        assert_main(vec![0x00, 0x04, 0x00, 0x02, ILOAD as i32, 0x01, ILOAD as i32, 0x05], &info);
     }
 
     #[test]
@@ -454,8 +459,8 @@ mod tests {
 "#;
         let info = compile(program, 10, None);
 
-        assert_constants(vec![12], &info);
-        assert_main(vec![INVOKEVIRTUAL as i32, 0, 0x00, 0x00, 0x00, 0x00, DUP as i32], &info);
+        assert_constants(vec![13], &info);
+        assert_main(vec![INVOKEVIRTUAL as i32, 0, 0x00, 0x00, 0x01, 0x00, 0x00, DUP as i32], &info);
     }
 
     #[test]
@@ -473,7 +478,7 @@ mod tests {
         let info = compile(program, 10, None);
 
         assert_constants(vec![13], &info);
-        assert_main(vec![DUP as i32, GOTO as i32, 10, 0x00, 0x00, 0x00, 0x00, DUP as i32, GOTO as i32, 17], &info);
+        assert_main(vec![DUP as i32, GOTO as i32, 10, 0x00, 0x01, 0x00, 0x00, DUP as i32, GOTO as i32, 17], &info);
     }
 
     #[test]
