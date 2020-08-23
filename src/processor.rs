@@ -91,13 +91,16 @@ impl Mic1 {
 
     pub fn execute_command(&mut self) {
         // Debugging info
-        self.print_stack();
-        Mic1::print_reg(&self.pc, "PC: ");
-        Mic1::print_reg(&self.lv, "LV: ");
-        Mic1::print_reg(&self.tos, "TOS: ");
-        Mic1::print_reg(&self.sp, "SP: ");
-        Mic1::print_reg(&self.h, "H: ");
-        Mic1::print_reg(&self.mar, "MAR: ");
+        // println!("-----------------------");
+        // self.print_stack();
+        // Mic1::print_reg(&self.pc, "PC: ");
+        // Mic1::print_reg(&self.lv, "LV: ");
+        // Mic1::print_reg(&self.tos, "TOS: ");
+        // Mic1::print_reg(&self.sp, "SP: ");
+        // Mic1::print_reg(&self.h, "H: ");
+        // Mic1::print_reg(&self.mar, "MAR: ");
+        // Mic1::print_reg(&self.mdr, "MDR: ");
+        // Mic1::print_reg(&self.mbr, "MBR: ");
 
         // Update registers from the main memory
         let (data, enabled) = self.main_memory.check_first_read();
@@ -111,7 +114,7 @@ impl Mic1 {
 
         // Write new command to mir register
         self.mir.update_from_bus(&new_command, true);
-        self.print_current_command();
+        // self.print_current_command();
 
         // Create B bus
         let b_bus_controls = self.mir.mir_b_bus_controls();

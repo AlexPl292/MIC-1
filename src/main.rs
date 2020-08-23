@@ -14,7 +14,7 @@ use crate::microasm::MicroAsm;
 use crate::microasm::MicroAsm::Main1;
 use crate::parser::parse;
 use crate::processor::Mic1;
-use crate::compiler::ProcessorInfo;
+use crate::compiler::{ProcessorInfo, compile};
 
 mod compiler;
 mod parser;
@@ -32,9 +32,21 @@ mod alu;
 extern "C" { fn tree_sitter_jas() -> Language; }
 
 const PROGRAM: &str = r#"
-        LDC_W 0x00 0x00
-        LDC_W 0x00 0x01
-        IADD
+        .constant
+            OBJREF 0
+        .end-constant
+        .main
+            LDC_W OBJREF
+            BIPUSH 1
+            BIPUSH 2
+            INVOKEVIRTUAL sum
+        .end-main
+        .method sum(first, second)
+            ILOAD first
+            ILOAD second
+            IADD
+            IRETURN
+        .end-method
 "#;
 
 const PROGRAM_START: usize = 100;
@@ -44,13 +56,13 @@ const STACK_START: i32 = 10;
 const CONSTS: [i32; 10] = [1, 2, 0, 0, 0, 0, 0, 0, 0, 0];
 
 fn main() {
-    let commands = parse(PROGRAM);
-    let mut mic1 = create_processor(&commands, vec![], CONSTS);
+    let info = compile(PROGRAM, PROGRAM_START as u32, Some(0xFF));
+    let mut mic1 = create_processor_from_info(&info);
 
-    mic1.run(commands.len() + 1, PROGRAM_START);
+    mic1.run_until_stop(0xFF);
 
     let tos_res = fast_encode(&mic1.tos.read(true));
-    print!("{:?}", tos_res)
+    print!("Result: {:?}", tos_res)
 }
 
 fn create_processor_from_info(info: &ProcessorInfo) -> Mic1 {

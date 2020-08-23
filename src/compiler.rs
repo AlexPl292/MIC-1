@@ -161,7 +161,12 @@ fn parse_method_body<'a>(
             "identifier" => {
                 let role = identifier_role(main_program.last().unwrap());
                 match role {
-                    CONSTANT => main_program.push(*constants.get(command.utf8_text(source.as_ref()).unwrap()).unwrap()),
+                    CONSTANT => {
+                        let const_name = command.utf8_text(source.as_ref()).unwrap();
+                        let position = constants.keys().position(|&x| x == const_name).unwrap();
+                        main_program.push(((position / 0x100) % 0x100) as i32);
+                        main_program.push((position % 0x100) as i32);
+                    },
                     LABEL => {
                         label_positions.insert(main_program.len(), command.utf8_text(source.as_ref()).unwrap());
                         main_program.push(PLACEHOLDER)
@@ -206,7 +211,7 @@ fn process_variables<'a>(node: &Node, source: &'a str) -> Vec<&'a str> {
 fn identifier_role(previous_command: &i32) -> IdentifierRole {
     let label_expected = [GOTO as i32, IFEQ as i32, IFLT as i32];
     let var_expected = [IINC as i32, ILOAD as i32, ISTORE as i32];
-    let const_expected = [LDC_W as i32, BIPUSH as i32];
+    let const_expected = [LDC_W as i32];
     let method_expected = [INVOKEVIRTUAL as i32];
 
     if label_expected.contains(&previous_command) {
