@@ -329,13 +329,13 @@ mod tests {
                         .end-constant
 
                         .main
-                        BIPUSH my_var
+                        LDC_W my_var
                         .end-main
 "#;
         let info = compile(program, 0, None);
 
         assert_constants(vec![2], &info);
-        assert_main(vec![BIPUSH as i32, 2], &info);
+        assert_main(vec![LDC_W as i32, 0x00, 0x00], &info);
     }
 
     #[test]
