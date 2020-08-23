@@ -53,8 +53,6 @@ const PROGRAM_START: usize = 100;
 
 const STACK_START: i32 = 10;
 
-const CONSTS: [i32; 10] = [1, 2, 0, 0, 0, 0, 0, 0, 0, 0];
-
 fn main() {
     let info = compile(PROGRAM, PROGRAM_START as u32, Some(0xFF));
     let mut mic1 = create_processor_from_info(&info);
